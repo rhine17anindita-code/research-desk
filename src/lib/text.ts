@@ -125,6 +125,13 @@ const ENTITY_STOP = new Set(
   ),
 );
 
+/** Words that are capitalised but are not names on their own. */
+const DEMONYMS = new Set(
+  `American Americans British Chinese Indian Pakistani Bangladeshi Afghan Iranian Iraqi Israeli Palestinian Saudi Emirati Qatari Turkish Syrian Lebanese Egyptian Russian Ukrainian European French German Italian Spanish Japanese Korean North South Taiwanese Thai Vietnamese Indonesian Malaysian Filipino Burmese Nepali Sri Lankan African Nigerian Kenyan Ethiopian Sudanese Mexican Brazilian Canadian Australian Western Eastern Arab Muslim Hindu Christian Jewish Bengali Asian Latin Gulf`.split(/\s+/),
+);
+const TITLE_WORDS = /^(CEO|CFO|Chair|Chairman|President|Vice|Prime|Minister|Chief|Former|Ex|Deputy|Secretary|General|Senator|Governor|Mayor|King|Queen|Prince|Crown|Pope|Judge|Justice|Speaker|Ambassador|Director|Head|Leader|Commander|Officer|Spokesperson|Spokesman)$/;
+const TRAILING_NOISE = /\s(Business|Live|Updates?|News|Explainer|Analysis|Opinion|Video|Photos|Exclusive|Latest|Today|Report|Says|Said)$/;
+
 /**
  * Cheap entity candidates: runs of capitalised words (and acronyms) that are not
  * just sentence starters. Good enough to connect stories sharing "Federal Reserve"
@@ -138,13 +145,17 @@ export function extractEntities(text: string, max = 12): string[] {
     let run: string[] = [];
     const flush = (startIdx: number) => {
       if (run.length) {
-        const phrase = run.join(" ").replace(/[’']s$/, "");
-        const single = run.length === 1;
+        // Drop leading job titles ("CEO of Nvidia" -> "Nvidia", "Prime Minister Modi" -> "Modi").
+        while (run.length > 1 && (TITLE_WORDS.test(run[0]) || /^(of|for)$/.test(run[0]))) run.shift();
+        let phrase = run.join(" ").replace(/[’']s$/, "");
+        while (TRAILING_NOISE.test(phrase)) phrase = phrase.replace(TRAILING_NOISE, "");
+        const single = !phrase.includes(" ");
         const isAcronym = /^[A-Z]{2,6}$/.test(phrase);
         // single capitalised word at sentence start is unreliable
         const longEnough = phrase.length > 2 || /^\p{Lu}[\p{L}]$/u.test(phrase) || isAcronym;
         const adjective = /-(based|led|backed|born|owned|made|style)$/i.test(phrase);
-        if (!(single && startIdx === 0 && !isAcronym) && !ENTITY_STOP.has(phrase) && longEnough && !adjective) {
+        const generic = (single && (DEMONYMS.has(phrase) || TITLE_WORDS.test(phrase))) || phrase.split(" ").every((x) => DEMONYMS.has(x));
+        if (!(single && startIdx === 0 && !isAcronym) && !ENTITY_STOP.has(phrase) && longEnough && !adjective && !generic) {
           counts.set(phrase, (counts.get(phrase) ?? 0) + 1);
         }
       }

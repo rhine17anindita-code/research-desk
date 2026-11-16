@@ -153,7 +153,8 @@ describe("research journey (news → questions → evidence → project → sear
   });
 
   it("refuses to answer without source material instead of inventing", async () => {
-    const q = createQuestion(db, { text: "A question with no story and no sources", origin: "user" });
+    const q = createQuestion(db, { text: "Zorblat qwixen frumious?", origin: "user" });
+    setRetrievalFetcherForTesting(async () => ({ query: { pages: {} } })); // background lookup finds nothing
     const r = await answerQuestion(db, q.id);
     expect(!isEstimate(r) && !r.ok).toBe(true);
     expect(provider.calls).toHaveLength(0);

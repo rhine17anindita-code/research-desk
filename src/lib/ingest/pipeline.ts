@@ -3,8 +3,9 @@ import { parseJson } from "../db";
 import { newId, nowIso } from "../ids";
 import { canonicalUrl, extractEntities, titleHash, uniqueTokens, truncate } from "../text";
 import { indexItem } from "../repo/search-index";
-import { absorb, CLUSTER_WINDOW_MS, findCluster, type ArticleFingerprint, type ClusterFingerprint } from "./cluster";
+import { absorb, buildIdf, CLUSTER_WINDOW_MS, findCluster, similarity, type ArticleFingerprint, type ClusterFingerprint, type Idf } from "./cluster";
 import { fetchFeedXml, parseFeed, type FeedItem } from "./rss";
+import { isGoogleNewsFeed } from "./default-feeds";
 
 export interface FeedRow {
   id: string; name: string; url: string; region: string | null; language: string | null; enabled: number; priority: number;
@@ -96,6 +97,7 @@ export function clusterPending(db: DB): { clustersNew: number; touched: string[]
     fps.push({ titleTokens: new Set(tok.t), allTokens: new Set(tok.a), entities: new Set(parseJson<string[]>(c.entities, [])), lastUpdated: new Date(c.last_updated_at).getTime() });
   }
 
+  const idf = recentIdf(db, oldest);
   const touched = new Set<string>();
   let clustersNew = 0;
   const now = nowIso();
@@ -104,7 +106,7 @@ export function clusterPending(db: DB): { clustersNew: number; touched: string[]
   db.transaction(() => {
     for (const a of pending) {
       const fp = fingerprint(a);
-      const idx = findCluster(fp, fps);
+      const idx = findCluster(fp, fps, idf);
       let cid: string;
       if (idx >= 0) {
         absorb(fps[idx], fp);
@@ -128,7 +130,140 @@ export function clusterPending(db: DB): { clustersNew: number; touched: string[]
       refreshCluster(db, cid, fp);
     }
   })();
+  mergeSimilarClusters(db, [...touched], idf);
   return { clustersNew, touched: [...touched] };
+}
+
+const PROTECTED_SQL = `(c.state != 'new' OR c.rating != 0 OR c.ai_brief IS NOT NULL
+  OR EXISTS (SELECT 1 FROM questions q WHERE q.cluster_id = c.id)
+  OR EXISTS (SELECT 1 FROM notes n WHERE n.cluster_id = c.id)
+  OR EXISTS (SELECT 1 FROM project_items p WHERE p.item_type = 'cluster' AND p.item_id = c.id)
+  OR EXISTS (SELECT 1 FROM links l WHERE (l.from_type = 'cluster' AND l.from_id = c.id) OR (l.to_type = 'cluster' AND l.to_id = c.id))
+  OR EXISTS (SELECT 1 FROM chat_threads t WHERE t.context_type = 'cluster' AND t.context_id = c.id))`;
+
+/** Move every article of `from` into `into` and refresh both (the empty one is deleted). */
+export function mergeClusterInto(db: DB, from: string, into: string): void {
+  if (from === into) return;
+  db.transaction(() => {
+    db.prepare("UPDATE articles SET cluster_id = ? WHERE cluster_id = ?").run(into, from);
+    // Carry over any research attached to the absorbed story.
+    db.prepare("UPDATE questions SET cluster_id = ? WHERE cluster_id = ?").run(into, from);
+    db.prepare("UPDATE notes SET cluster_id = ? WHERE cluster_id = ?").run(into, from);
+    db.prepare("UPDATE OR IGNORE project_items SET item_id = ? WHERE item_type = 'cluster' AND item_id = ?").run(into, from);
+    db.prepare("DELETE FROM project_items WHERE item_type = 'cluster' AND item_id = ?").run(from);
+    db.prepare("UPDATE OR IGNORE links SET from_id = ? WHERE from_type = 'cluster' AND from_id = ?").run(into, from);
+    db.prepare("UPDATE OR IGNORE links SET to_id = ? WHERE to_type = 'cluster' AND to_id = ?").run(into, from);
+    db.prepare("DELETE FROM links WHERE (from_type = 'cluster' AND from_id = ?) OR (to_type = 'cluster' AND to_id = ?)").run(from, from);
+    db.prepare("UPDATE chat_threads SET context_id = ? WHERE context_type = 'cluster' AND context_id = ?").run(into, from);
+    const f = db.prepare("SELECT state, rating FROM clusters WHERE id = ?").get(from) as { state: string; rating: number } | undefined;
+    if (f && f.state === "saved") db.prepare("UPDATE clusters SET state = 'saved' WHERE id = ? AND state = 'new'").run(into);
+    if (f && f.rating) db.prepare("UPDATE clusters SET rating = ? WHERE id = ? AND rating = 0").run(f.rating, into);
+    db.prepare("DELETE FROM feedback WHERE cluster_id = ?").run(from);
+    db.prepare("DELETE FROM search_index WHERE kind = 'cluster' AND ref_id = ?").run(from);
+    refreshCluster(db, into);
+    refreshCluster(db, from);
+  })();
+}
+
+/**
+ * Combine stories that turn out to cover the same event (e.g. both formed before
+ * enough coverage arrived). Automatic merges never combine two stories that both hold
+ * your work; an untouched story is folded into the one you have worked on.
+ */
+export function mergeSimilarClusters(db: DB, focusIds?: string[], idf?: Idf): number {
+  const since = new Date(Date.now() - 5 * 86_400_000).toISOString();
+  const rows = db
+    .prepare(`SELECT c.id, c.tokens, c.entities, c.last_updated_at, c.article_count, ${PROTECTED_SQL} AS protected FROM clusters c WHERE c.last_updated_at >= ?`)
+    .all(since) as { id: string; tokens: string; entities: string; last_updated_at: string; article_count: number; protected: number }[];
+  const fp = new Map(
+    rows.map((r) => {
+      const tok = parseJson<{ t: string[]; a: string[] }>(r.tokens, { t: [], a: [] });
+      return [r.id, { titleTokens: new Set(tok.t), allTokens: new Set(tok.a), entities: new Set(parseJson<string[]>(r.entities, [])), lastUpdated: new Date(r.last_updated_at).getTime() }];
+    }),
+  );
+  const focusSet = focusIds ? new Set(focusIds) : null;
+  const focus = focusSet ? rows.filter((r) => focusSet.has(r.id)) : rows;
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  // Inverted index: only compare stories sharing at least two headline words.
+  const index = new Map<string, string[]>();
+  for (const r of rows) for (const t of fp.get(r.id)!.titleTokens) (index.get(t) ?? index.set(t, []).get(t)!).push(r.id);
+  const gone = new Set<string>();
+  let merged = 0;
+  for (const a of focus) {
+    if (gone.has(a.id)) continue;
+    const shared = new Map<string, number>();
+    for (const t of fp.get(a.id)!.titleTokens) for (const id of index.get(t) ?? []) shared.set(id, (shared.get(id) ?? 0) + 1);
+    const candidates = [...shared.entries()].filter(([id, n]) => n >= 2 && id !== a.id).map(([id]) => byId.get(id)!);
+    for (const b of candidates) {
+      if (a.id === b.id || gone.has(b.id) || gone.has(a.id)) continue;
+      if (a.protected && b.protected) continue;
+      const fa = fp.get(a.id)!;
+      const fb = fp.get(b.id)!;
+      // Compare the smaller story (as if it were one article) against the larger.
+      const [small, large] = a.article_count <= b.article_count ? [a, b] : [b, a];
+      const fs = fp.get(small.id)!;
+      const sim = Math.min(
+        similarity({ titleTokens: fs.titleTokens, allTokens: fs.allTokens, entities: fs.entities, publishedAt: fs.lastUpdated }, fp.get(large.id)!, idf),
+        1,
+      );
+      if (sim <= 0 || Math.abs(fa.lastUpdated - fb.lastUpdated) > CLUSTER_WINDOW_MS) continue;
+      // Keep the protected story; otherwise keep the larger one.
+      const [from, into] = small.protected ? [large, small] : [small, large];
+      mergeClusterInto(db, from.id, into.id);
+      gone.add(from.id);
+      const fi = fp.get(into.id)!;
+      const ff = fp.get(from.id)!;
+      for (const t of ff.titleTokens) fi.titleTokens.add(t);
+      for (const t of ff.allTokens) fi.allTokens.add(t);
+      for (const e of ff.entities) fi.entities.add(e);
+      into.article_count += from.article_count;
+      merged++;
+    }
+  }
+  return merged;
+}
+
+/** Word rarity over headlines from the week around `around` (epoch ms). */
+function recentIdf(db: DB, around: number): Idf {
+  const from = new Date(around - 7 * 86_400_000).toISOString();
+  const rows = db.prepare("SELECT title FROM articles WHERE COALESCE(published_at, fetched_at) >= ?").all(from) as { title: string }[];
+  return buildIdf(rows.map((r) => new Set(uniqueTokens(r.title))));
+}
+
+/**
+ * Regroup recent stories with the current clustering rules. Stories that hold any of
+ * your work (saved, rated, questions, notes, links, projects, AI brief) are kept as they
+ * are; only untouched stories are dissolved and their articles re-clustered.
+ */
+export function reclusterRecent(db: DB, days = 4): { before: number; after: number; kept: number } {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const candidates = db
+    .prepare(
+      `SELECT c.id FROM clusters c WHERE c.last_updated_at >= ? AND c.state = 'new' AND c.rating = 0 AND c.ai_brief IS NULL
+         AND NOT EXISTS (SELECT 1 FROM questions q WHERE q.cluster_id = c.id)
+         AND NOT EXISTS (SELECT 1 FROM notes n WHERE n.cluster_id = c.id)
+         AND NOT EXISTS (SELECT 1 FROM project_items p WHERE p.item_type = 'cluster' AND p.item_id = c.id)
+         AND NOT EXISTS (SELECT 1 FROM links l WHERE (l.from_type = 'cluster' AND l.from_id = c.id) OR (l.to_type = 'cluster' AND l.to_id = c.id))
+         AND NOT EXISTS (SELECT 1 FROM chat_threads t WHERE t.context_type = 'cluster' AND t.context_id = c.id)`,
+    )
+    .all(since) as { id: string }[];
+  const total = (db.prepare("SELECT COUNT(*) AS n FROM clusters WHERE last_updated_at >= ?").get(since) as { n: number }).n;
+  db.transaction(() => {
+    const arts = db.prepare("SELECT id, title, summary FROM articles WHERE cluster_id = ?");
+    const upd = db.prepare("UPDATE articles SET cluster_id = NULL, entities = ? WHERE id = ?");
+    for (const { id } of candidates) {
+      for (const a of arts.all(id) as { id: string; title: string; summary: string | null }[]) {
+        upd.run(JSON.stringify(extractEntities(`${a.title}. ${a.summary ?? ""}`, 10)), a.id);
+      }
+      db.prepare("DELETE FROM search_index WHERE kind = 'cluster' AND ref_id = ?").run(id);
+      db.prepare("DELETE FROM feedback WHERE cluster_id = ?").run(id);
+      db.prepare("DELETE FROM clusters WHERE id = ?").run(id);
+    }
+  })();
+  clusterPending(db);
+  mergeSimilarClusters(db, undefined, recentIdf(db, Date.now()));
+  const after = (db.prepare("SELECT COUNT(*) AS n FROM clusters WHERE last_updated_at >= ?").get(since) as { n: number }).n;
+  return { before: total, after, kept: total - candidates.length };
 }
 
 /** Recompute headline, summary, counts, dates and the search index entry for one cluster. */
@@ -215,6 +350,19 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
   return out;
 }
 
+/**
+ * Google News items carry the real outlet in the headline ("Headline - Outlet") and a
+ * description that only repeats the headline. Credit the real outlet so story clusters
+ * count outlets correctly.
+ */
+export function fromAggregator(item: FeedItem): { item: FeedItem; publisher: string } {
+  const m = item.title.match(/^(.*\S)\s+[-–—]\s+([^-–—]{2,60})$/);
+  const title = m ? m[1] : item.title;
+  const publisher = m ? m[2].trim() : "Google News";
+  const summary = item.summary && !item.summary.startsWith(title.slice(0, 40)) ? item.summary : null;
+  return { item: { ...item, title, summary }, publisher };
+}
+
 let running: Promise<IngestResult> | null = null;
 
 /** Fetch all enabled feeds (or a subset), store new articles and cluster them. Concurrent calls share one run. */
@@ -242,8 +390,10 @@ async function doIngest(db: DB, opts: { feedIds?: string[]; trigger?: string; fe
       const parsed = await parseFeed(xml);
       let fresh = 0;
       db.transaction(() => {
-        for (const item of parsed.items.slice(0, 80)) {
-          const r = insertArticle(db, { feedId: feed.id, publisher: feed.name, region: feed.region, language: feed.language, item });
+        const aggregator = isGoogleNewsFeed(feed.url);
+        for (const raw of parsed.items.slice(0, 80)) {
+          const { item, publisher } = aggregator ? fromAggregator(raw) : { item: raw, publisher: feed.name };
+          const r = insertArticle(db, { feedId: feed.id, publisher, region: feed.region, language: feed.language, item });
           if (r.outcome === "new") { fresh++; result.articlesNew++; } else result.articlesDuplicate++;
         }
       })();

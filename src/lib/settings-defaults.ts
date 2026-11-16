@@ -21,6 +21,8 @@ export interface AppSettings {
   "discover.region_weights": Record<string, number>;
   "pipeline.stages": PipelineStage[];
   "retrieval.providers": { openalex: boolean; crossref: boolean; wikipedia: boolean; gdelt: boolean };
+  /** Free-text description of the researcher, audience and format; steers AI output. */
+  "profile.about": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -45,4 +47,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     { id: "archived", label: "Archived" },
   ],
   "retrieval.providers": { openalex: true, crossref: true, wikipedia: true, gdelt: true },
+  "profile.about": "",
 };

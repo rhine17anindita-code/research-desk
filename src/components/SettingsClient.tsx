@@ -39,6 +39,8 @@ export function FeedsSettings({ feeds, hasSample, runs, scheduleMinutes }: { fee
         <RefreshButton label="Refresh all now" />
       </section>
 
+      <TopicWatch />
+
       <section className="card p-4">
         <div className="eyebrow mb-2">Add a feed</div>
         <div className="grid gap-2 md:grid-cols-[2fr_1fr_1fr_auto]">
@@ -121,7 +123,9 @@ export function FeedsSettings({ feeds, hasSample, runs, scheduleMinutes }: { fee
           </ul>
         </div>
         <div>
-          <div className="eyebrow mb-2">Sample data</div>
+          <div className="eyebrow mb-2">Story grouping</div>
+          <RegroupButton />
+          <div className="eyebrow mb-2 mt-5">Sample data</div>
           {hasSample ? (
             <button className="btn" onClick={async () => { await api("/api/sample", "DELETE"); router.refresh(); }}>Remove fictional sample stories</button>
           ) : (
@@ -134,6 +138,71 @@ export function FeedsSettings({ feeds, hasSample, runs, scheduleMinutes }: { fee
   );
 }
 
+function RegroupButton() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <div>
+      <button
+        className="btn"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          const r = await api<{ before: number; after: number; kept: number }>("/api/maintenance/recluster", "POST", {});
+          setMsg(`Regrouped the last 4 days: ${r.before} → ${r.after} stories. ${r.kept} stories with your work were left as they were.`);
+          setBusy(false);
+          router.refresh();
+        }}
+      >
+        {busy ? "Regrouping…" : "Regroup recent stories"}
+      </button>
+      <p className="mt-1 text-[12px] text-muted">{msg ?? "Re-runs story grouping over the last 4 days and merges duplicates. Stories you have worked on keep their research."}</p>
+    </div>
+  );
+}
+
+function TopicWatch() {
+  const router = useRouter();
+  const [topic, setTopic] = useState("");
+  const [region, setRegion] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <section className="card p-4">
+      <div className="eyebrow mb-1">Watch a topic</div>
+      <p className="mb-2 text-[12.5px] text-muted">
+        Follow a subject across every outlet Google News indexes, including papers without their own feeds. Use quotes for exact phrases, e.g. <code className="rounded bg-surface-2 px-1">&quot;Teesta water&quot;</code> or <code className="rounded bg-surface-2 px-1">Rohingya Myanmar</code>.
+      </p>
+      <div className="grid gap-2 md:grid-cols-[2fr_1fr_auto]">
+        <input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic, people or places to follow" />
+        <input className="input" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Region label (optional)" />
+        <button
+          className="btn-primary"
+          disabled={!topic.trim() || busy}
+          onClick={async () => {
+            setBusy(true);
+            setMsg(null);
+            try {
+              const r = await api<{ items: number }>("/api/feeds", "POST", { topic, region: region || undefined });
+              setMsg(`Watching “${topic}” — ${r.items} current headlines. They arrive with the next refresh.`);
+              setTopic("");
+              router.refresh();
+            } catch (e) {
+              setMsg((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Checking…" : "Watch"}
+        </button>
+      </div>
+      {msg && <p className="mt-1.5 text-[12px] text-muted">{msg}</p>}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Personalisation
 // ---------------------------------------------------------------------------
@@ -141,7 +210,39 @@ export function FeedsSettings({ feeds, hasSample, runs, scheduleMinutes }: { fee
 interface SignalRow { id: string; label: string; description: string; cues: string[]; weight: number; learned: number; enabled: number; builtin: number }
 interface RuleRow { id: string; name: string; action: string; field: string; pattern: string; weight: number; enabled: number }
 
-export function PersonalisationSettings({ signals, rules, regions, regionWeights, windowHours, topTerms }: { signals: SignalRow[]; rules: RuleRow[]; regions: string[]; regionWeights: Record<string, number>; windowHours: number; topTerms: { term: string; weight: number }[] }) {
+function ProfileEditor({ initial }: { initial: string }) {
+  const [text, setText] = useState(initial);
+  const [saved, setSaved] = useState<string | null>(null);
+  return (
+    <section className="card p-4">
+      <h2 className="font-serif text-[19px] font-semibold">Your research profile</h2>
+      <p className="mb-2 text-[13px] text-muted">
+        Tell the AI who you are and what you make. It is included with question generation, answers and the assistant so suggestions fit your audience and format. Used only when you run an AI action.
+      </p>
+      <textarea
+        className="input min-h-[130px] text-[13.5px] leading-relaxed"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={"e.g. I make explainer videos and articles on Bangladesh, South Asia and Middle East politics for a young Bangladeshi audience (18–35), in English and Bangla. I like stories about power, money and who benefits, and I need angles that are verifiable and that mainstream coverage has missed. Format: 6–10 minute YouTube videos and short reels."}
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          className="btn-primary"
+          onClick={async () => {
+            await api("/api/settings", "PATCH", { "profile.about": text });
+            setSaved("Saved — new AI results will use it.");
+            setTimeout(() => setSaved(null), 3000);
+          }}
+        >
+          Save profile
+        </button>
+        {saved && <span className="text-[12px] text-ok">{saved}</span>}
+      </div>
+    </section>
+  );
+}
+
+export function PersonalisationSettings({ signals, rules, regions, regionWeights, windowHours, topTerms, profile }: { signals: SignalRow[]; rules: RuleRow[]; regions: string[]; regionWeights: Record<string, number>; windowHours: number; topTerms: { term: string; weight: number }[]; profile: string }) {
   const router = useRouter();
   const [newSig, setNewSig] = useState({ label: "", description: "", cues: "" });
   const [rule, setRule] = useState({ action: "boost", field: "any", pattern: "", weight: 3 });
@@ -156,6 +257,7 @@ export function PersonalisationSettings({ signals, rules, regions, regionWeights
 
   return (
     <div className="space-y-8">
+      <ProfileEditor initial={profile} />
       <section>
         <h2 className="font-serif text-[19px] font-semibold">Editorial signals</h2>
         <p className="mb-3 text-[13px] text-muted">

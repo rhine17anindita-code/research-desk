@@ -107,7 +107,7 @@ export interface Question {
   sourceCount?: number;
 }
 
-export type ClaimKind = "fact" | "interpretation" | "allegation" | "prediction" | "hypothesis";
+export type ClaimKind = "fact" | "background" | "interpretation" | "allegation" | "prediction" | "hypothesis";
 
 export interface AnswerPoint {
   text: string;

@@ -4,7 +4,7 @@ export interface FeedSeed {
   siteUrl?: string;
   region: string;
   language?: string;
-  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science";
+  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic";
   enabled?: boolean;
 }
 
@@ -16,6 +16,17 @@ export interface FeedSeed {
  * Only headline, link, date and the publisher-provided description are stored.
  * Full article text is never scraped.
  */
+/** Bump when DEFAULT_FEEDS gains entries, so existing installations receive them once. */
+export const FEED_CATALOG_VERSION = 2;
+
+export function googleNewsTopicUrl(query: string): string {
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+export function isGoogleNewsFeed(url: string): boolean {
+  return /^https:\/\/news\.google\.com\/rss/.test(url);
+}
+
 export const DEFAULT_FEEDS: FeedSeed[] = [
   // International
   { name: "BBC News — World", url: "https://feeds.bbci.co.uk/news/world/rss.xml", siteUrl: "https://www.bbc.co.uk/news/world", region: "Global", category: "international" },
@@ -35,6 +46,16 @@ export const DEFAULT_FEEDS: FeedSeed[] = [
   { name: "The Japan Times", url: "https://www.japantimes.co.jp/feed/", siteUrl: "https://www.japantimes.co.jp", region: "East Asia", category: "regional" },
   { name: "ABC News (Australia)", url: "https://www.abc.net.au/news/feed/2942460/rss.xml", siteUrl: "https://www.abc.net.au/news", region: "Oceania", category: "regional" },
   { name: "AllAfrica — Latest", url: "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf", siteUrl: "https://allafrica.com", region: "Africa", category: "regional" },
+  { name: "Dhaka Tribune", url: "https://www.dhakatribune.com/feed/", siteUrl: "https://www.dhakatribune.com", region: "South Asia", category: "regional" },
+  { name: "The Business Standard (Bangladesh)", url: "https://www.tbsnews.net/bangladesh/rss.xml", siteUrl: "https://www.tbsnews.net", region: "South Asia", category: "regional" },
+  { name: "The Business Standard — Economy", url: "https://www.tbsnews.net/economy/rss.xml", siteUrl: "https://www.tbsnews.net", region: "South Asia", category: "regional" },
+  { name: "Scroll.in", url: "https://feeds.feedburner.com/ScrollinArticles.rss", siteUrl: "https://scroll.in", region: "South Asia", category: "regional" },
+  { name: "The Kathmandu Post", url: "https://kathmandupost.com/rss", siteUrl: "https://kathmandupost.com", region: "South Asia", category: "regional" },
+  { name: "Himal Southasian", url: "https://www.himalmag.com/feed", siteUrl: "https://www.himalmag.com", region: "South Asia", category: "analysis" },
+  { name: "Middle East Eye", url: "https://www.middleeasteye.net/rss", siteUrl: "https://www.middleeasteye.net", region: "Middle East", category: "regional" },
+  { name: "Arab News", url: "https://www.arabnews.com/rss.xml", siteUrl: "https://www.arabnews.com", region: "Middle East", category: "regional" },
+  { name: "Al-Monitor", url: "https://www.al-monitor.com/rss", siteUrl: "https://www.al-monitor.com", region: "Middle East", category: "regional" },
+  { name: "+972 Magazine", url: "https://www.972mag.com/feed/", siteUrl: "https://www.972mag.com", region: "Middle East", category: "investigative" },
   { name: "MercoPress", url: "https://en.mercopress.com/rss", siteUrl: "https://en.mercopress.com", region: "Latin America", category: "regional" },
 
   // Investigative
@@ -50,6 +71,15 @@ export const DEFAULT_FEEDS: FeedSeed[] = [
   // Research & expert commentary
   { name: "The Conversation — Global", url: "https://theconversation.com/global/articles.atom", siteUrl: "https://theconversation.com/global", region: "Global", category: "research" },
   { name: "Brookings", url: "https://www.brookings.edu/feed/", siteUrl: "https://www.brookings.edu", region: "North America", category: "research", enabled: false }, // feed XML is currently malformed
+
+  { name: "The Diplomat", url: "https://thediplomat.com/feed/", siteUrl: "https://thediplomat.com", region: "Asia", category: "analysis" },
+  { name: "Foreign Policy", url: "https://foreignpolicy.com/feed/", siteUrl: "https://foreignpolicy.com", region: "Global", category: "analysis" },
+  { name: "International Crisis Group", url: "https://www.crisisgroup.org/rss.xml", siteUrl: "https://www.crisisgroup.org", region: "Global", category: "analysis" },
+  { name: "The Economist — Asia", url: "https://www.economist.com/asia/rss.xml", siteUrl: "https://www.economist.com/asia", region: "Asia", category: "analysis" },
+  { name: "Financial Times — World", url: "https://www.ft.com/world?format=rss", siteUrl: "https://www.ft.com/world", region: "Global", category: "international" },
+
+  // Topic watches (Google News search feeds: headlines from many outlets, including those without their own feeds)
+  { name: "Topic: Bangladesh", url: googleNewsTopicUrl("Bangladesh"), siteUrl: "https://news.google.com", region: "South Asia", category: "topic" },
 
   // Technology, industry, science
   { name: "Rest of World", url: "https://restofworld.org/feed/latest/", siteUrl: "https://restofworld.org", region: "Global", category: "industry" },

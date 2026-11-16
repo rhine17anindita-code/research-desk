@@ -47,6 +47,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           regionWeights={settings["discover.region_weights"]}
           windowHours={settings["discover.window_hours"]}
           topTerms={db.prepare("SELECT term, weight FROM term_weights ORDER BY ABS(weight) DESC LIMIT 24").all() as never}
+          profile={settings["profile.about"]}
         />
       )}
       {tab === "ai" && (

@@ -2,11 +2,20 @@ import { getDb } from "@/lib/db";
 import { body, route } from "@/lib/http";
 import { newId, nowIso } from "@/lib/ids";
 import { fetchFeedXml, parseFeed } from "@/lib/ingest/rss";
+import { googleNewsTopicUrl } from "@/lib/ingest/default-feeds";
 
 /** Add a feed. The URL is fetched once to confirm it parses, so broken feeds are caught up front. */
 export const POST = route(async (req: Request) => {
-  const b = await body<{ url: string; name?: string; region?: string; category?: string }>(req);
+  const b = await body<{ url?: string; topic?: string; name?: string; region?: string; category?: string }>(req);
+  if (b.topic?.trim()) {
+    // Topic watch: a Google News search feed for these words.
+    const topic = b.topic.trim().slice(0, 120);
+    b.url = googleNewsTopicUrl(topic);
+    b.name = `Topic: ${topic}`;
+    b.category = "topic";
+  }
   if (!/^https?:\/\//i.test(b.url ?? "")) throw new Error("Enter a full feed URL starting with http(s)://");
+  b.url = b.url!;
   const db = getDb();
   if (db.prepare("SELECT 1 FROM feeds WHERE url = ?").get(b.url)) throw new Error("That feed is already in your list");
   let title: string | null = null;

@@ -34,6 +34,7 @@ export function OriginBadge({ origin }: { origin: string }) {
 
 const KIND_STYLE: Record<string, string> = {
   fact: "text-ok",
+  background: "text-muted",
   interpretation: "text-ai",
   allegation: "text-bad",
   prediction: "text-warn",
@@ -41,5 +42,11 @@ const KIND_STYLE: Record<string, string> = {
 };
 
 export function ClaimKind({ kind }: { kind: string }) {
+  if (kind === "background")
+    return (
+      <span className="text-[10.5px] font-semibold uppercase tracking-wide text-muted" title="From the AI's general knowledge, not from a supplied source. Verify before relying on it.">
+        background
+      </span>
+    );
   return <span className={`text-[10.5px] font-semibold uppercase tracking-wide ${KIND_STYLE[kind] ?? "text-muted"}`}>{kind}</span>;
 }

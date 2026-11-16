@@ -14,6 +14,7 @@ import { AddToProject, Connections } from "@/components/research/Connections";
 import { BriefButton, StoryFeedback } from "@/components/StoryActions";
 import { Icon } from "@/components/Icon";
 import { OriginBadge } from "@/components/research/Badges";
+import { MergeStory } from "@/components/MergeStory";
 import { fmtDate, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -111,6 +112,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
           <div>
             <div className="eyebrow mb-1.5">Coverage · timeline</div>
+            <div className="mb-2"><MergeStory id={story.id} /></div>
             <ol className="relative space-y-2.5 border-l border-line pl-3.5">
               {articles.map((a) => (
                 <li key={a.id} className="relative">

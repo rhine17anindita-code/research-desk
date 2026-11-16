@@ -6,6 +6,7 @@ import { getStory, getStoryArticles } from "../repo/stories";
 import { getProject, listNotes, projectItemIds } from "../repo/projects";
 import { getQuestion, listAnswers, listQuestions } from "../repo/questions";
 import { getSources, questionSources, sourceForArticle, upsertSource } from "../repo/sources";
+import { getSetting } from "../repo/settings";
 import { keywordQuery, truncate } from "../text";
 import { searchLocal, searchOpenAlex, searchWikipedia } from "./retrieval";
 import { buildSourcePack, resolveRefs } from "./ai-tasks";
@@ -135,7 +136,9 @@ export async function assistantTurn(
   }
 
   const pack = buildSourcePack([...extra, ...ctx.sources], 26000, 900);
+  const about = getSetting(db, "profile.about").trim();
   const user = [
+    about ? `ABOUT THE RESEARCHER (tailor your help to this):\n${truncate(about, 1500)}` : "",
     `RESEARCH CONTEXT — ${ctx.label}`,
     ctx.material,
     pack.text ? `SOURCE EXCERPTS:\n\n${pack.text}` : "SOURCE EXCERPTS: (none available)",

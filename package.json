@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:init": "tsx scripts/init-db.ts",
     "ingest": "tsx scripts/ingest.ts",
-    "seed:sample": "tsx scripts/seed-sample.ts"
+    "seed:sample": "tsx scripts/seed-sample.ts",
+    "recluster": "tsx scripts/recluster.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.9.0",
