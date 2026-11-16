@@ -78,9 +78,9 @@ export default async function DiscoverPage({ searchParams }: { searchParams: SP 
             </div>
           </div>
 
-          <form className="mb-4 flex flex-wrap gap-2" action="/discover">
+          <form className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0" action="/discover">
             {view !== "ranked" && <input type="hidden" name="view" value={view} />}
-            <input name="q" defaultValue={sp.q} placeholder="Filter by words…" className="input !w-48 flex-1" />
+            <input name="q" defaultValue={sp.q} placeholder="Filter by words…" className="input !w-40 sm:!w-48 sm:flex-1" />
             <select name="signal" defaultValue={sp.signal ?? ""} className="input !w-auto">
               <option value="">Any signal</option>
               {signals.map((s) => (

@@ -23,8 +23,9 @@
   --focus: #2a5687;
 }
 
+/* Dark theme: follows the system unless the user picks one (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper: #141518;
     --surface: #1b1d21;
     --surface-2: #23252a;
@@ -45,6 +46,26 @@
     --bad-soft: #33201b;
   }
 }
+:root[data-theme="dark"] {
+    --paper: #141518;
+    --surface: #1b1d21;
+    --surface-2: #23252a;
+    --ink: #e8e6e1;
+    --ink-2: #c4c2bd;
+    --muted: #93959c;
+    --line: #2e3036;
+    --line-strong: #3d4048;
+    --accent: #8db4e2;
+    --accent-soft: #1f2a38;
+    --ai: #b7a0dc;
+    --ai-soft: #29233a;
+    --ok: #7fc39b;
+    --ok-soft: #1c2b22;
+    --warn: #e0bd6b;
+    --warn-soft: #2e2817;
+    --bad: #e4917b;
+    --bad-soft: #33201b;
+  }
 
 @theme inline {
   --color-paper: var(--paper);
@@ -67,6 +88,13 @@
   --color-bad-soft: var(--bad-soft);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 html,
@@ -128,4 +156,9 @@ body {
   .prose-research ol {
     @apply mb-2 list-decimal pl-5;
   }
+}
+
+@media print {
+  aside, .print\:hidden { display: none !important; }
+  html, body { background: #fff !important; color: #000 !important; }
 }

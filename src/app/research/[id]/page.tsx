@@ -8,7 +8,9 @@ import { getSources, questionSources } from "@/lib/repo/sources";
 import { getSetting } from "@/lib/repo/settings";
 import { DeleteProject, ProjectField, ProjectQuestions, ProjectSide, RemoveItem, StageSelect } from "@/components/ProjectComponents";
 import { NotesPanel } from "@/components/research/NotesPanel";
+import { CreatorPanel } from "@/components/CreatorPanel";
 import { Icon } from "@/components/Icon";
+import { TrackVisit } from "@/components/CommandPalette";
 import { timeAgo } from "@/lib/format";
 import type { Source } from "@/lib/types";
 
@@ -34,6 +36,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="px-4 py-5 sm:px-6 lg:px-8">
+      <TrackVisit kind="project" title={project.title} href={`/research/${project.id}`} />
       <div className="mb-3 flex items-center justify-between text-[12.5px] text-muted">
         <Link href="/research" className="hover:text-ink"><Icon name="arrowLeft" size={13} className="inline" /> Research</Link>
         <DeleteProject id={id} />
@@ -77,6 +80,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <ProjectField id={id} field="angles" value={project.angles} label="Editorial angles" placeholder="Explainer, investigation, data piece, short video…" />
           </section>
           <ProjectField id={id} field="description" value={project.description} label="Working notes / outline" placeholder="Structure, sequence, key scenes, what to show…" />
+
+          <CreatorPanel projectId={id} />
 
           <NotesPanel notes={notes} projectId={id} />
         </div>

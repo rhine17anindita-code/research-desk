@@ -5,6 +5,7 @@ import { questionDetail } from "@/lib/research/question-detail";
 import { QuestionWorkspace } from "@/components/research/QuestionWorkspace";
 import { DimensionLabel, OriginBadge, StateBadge } from "@/components/research/Badges";
 import { Icon } from "@/components/Icon";
+import { TrackVisit } from "@/components/CommandPalette";
 import { fmtDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function QuestionPage({ params }: { params: Promise<{ id: s
   const q = d.question;
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">
+      <TrackVisit kind="question" title={q.text} href={`/question/${q.id}`} />
       <div className="mb-4 flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         {d.story ? (
           <Link href={`/story/${d.story.id}?q=${q.id}`} className="hover:text-ink"><Icon name="arrowLeft" size={13} className="inline" /> {d.story.headline}</Link>

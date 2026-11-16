@@ -7,6 +7,7 @@ import { getArticle } from "@/lib/repo/stories";
 import { SourceEditor } from "@/components/LibraryClient";
 import { AddToProject, Connections } from "@/components/research/Connections";
 import { Icon } from "@/components/Icon";
+import { TrackVisit } from "@/components/CommandPalette";
 import { fmtDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
   const article = s.articleId ? getArticle(db, s.articleId) : null;
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6 lg:px-8">
+      <TrackVisit kind="source" title={s.title} href={`/library/source/${s.id}`} />
       <div className="mb-4 text-[12.5px] text-muted"><Link href="/library" className="hover:text-ink"><Icon name="arrowLeft" size={13} className="inline" /> Library</Link></div>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>

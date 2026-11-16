@@ -13,8 +13,10 @@ import { NotesPanel } from "@/components/research/NotesPanel";
 import { AddToProject, Connections } from "@/components/research/Connections";
 import { BriefButton, StoryFeedback } from "@/components/StoryActions";
 import { Icon } from "@/components/Icon";
+import { TrackVisit } from "@/components/CommandPalette";
 import { OriginBadge } from "@/components/research/Badges";
 import { MergeStory } from "@/components/MergeStory";
+import { StoryShell } from "@/components/StoryShell";
 import { fmtDate, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -37,14 +39,16 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="px-4 py-5 sm:px-6 lg:px-8">
+      <TrackVisit kind="story" title={story.headline} href={`/story/${story.id}`} />
       <div className="mb-4 flex items-center gap-2 text-[12.5px] text-muted">
         <Link href="/discover" className="hover:text-ink"><Icon name="arrowLeft" size={13} className="inline" /> Discover</Link>
         <span>/</span>
         <Link href="/explore" className="hover:text-ink">Explore</Link>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-        {/* Left: story context */}
+      <StoryShell
+        headline={story.headline}
+        left={
         <aside className="min-w-0 space-y-5 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:pr-1">
           <div>
             {story.isSample && <div className="mb-2 inline-block rounded bg-warn-soft px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-warn">Sample · fictional story</div>}
@@ -159,12 +163,12 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
           <Connections type="cluster" id={story.id} initial={links} />
           <NotesPanel notes={notes} clusterId={story.id} />
         </aside>
-
-        {/* Center + right */}
+        }
+      >
         <Suspense>
           <StoryResearch clusterId={story.id} initialQuestions={questions} />
         </Suspense>
-      </div>
+      </StoryShell>
     </div>
   );
 }
