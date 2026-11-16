@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Beta Wire</title>
+  <link href="https://beta.example.org/"/>
+  <entry>
+    <title>Amber River water-sharing framework agreed by Veloria and Ostrand, details unclear</title>
+    <link href="https://beta.example.org/2026/11/16/amber-river"/>
+    <id>tag:beta.example.org,2026:amber</id>
+    <updated>2026-11-16T10:00:00Z</updated>
+    <summary>Farmers' groups said they were not consulted. Ostrand denies it agreed to limits on new dams.</summary>
+  </entry>
+  <entry>
+    <title>Port of Calder awards terminal contract without tender</title>
+    <link href="https://beta.example.org/2026/11/16/calder-port"/>
+    <id>tag:beta.example.org,2026:calder</id>
+    <updated>2026-11-16T11:00:00Z</updated>
+    <summary>Opposition lawmakers raised conflict of interest questions about the concession.</summary>
+  </entry>
+</feed>

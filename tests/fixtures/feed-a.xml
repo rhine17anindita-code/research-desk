@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel>
+  <title>Alpha News</title>
+  <link>https://alpha.example.com</link>
+  <item>
+    <title>Veloria and Ostrand agree Amber River water-sharing framework</title>
+    <link>https://alpha.example.com/world/amber-river-deal?utm_source=rss&amp;utm_medium=feed</link>
+    <description><![CDATA[<p>The two governments announced a framework on sharing the Amber River but did not specify volumes or how disputes will be settled.</p>]]></description>
+    <pubDate>Mon, 16 Nov 2026 08:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Central bank of Veloria holds interest rates steady</title>
+    <link>https://alpha.example.com/business/rates</link>
+    <description>Policymakers kept rates unchanged & signalled concern over food prices.</description>
+    <pubDate>Mon, 16 Nov 2026 09:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title></title>
+    <link>https://alpha.example.com/broken</link>
+  </item>
+</channel>
+</rss>

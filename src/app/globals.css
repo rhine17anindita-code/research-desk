@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* Design tokens. Restrained palette: paper, ink, one blue accent, muted state colours. */
+:root {
+  --paper: #f7f6f2;
+  --surface: #ffffff;
+  --surface-2: #f1efe9;
+  --ink: #1b1d21;
+  --ink-2: #44474e;
+  --muted: #6d7078;
+  --line: #e3e0d8;
+  --line-strong: #cfcbc1;
+  --accent: #2a5687;
+  --accent-soft: #e7eef6;
+  --ai: #6b4e9b;
+  --ai-soft: #f1ecf8;
+  --ok: #2f6a48;
+  --ok-soft: #e6f1ea;
+  --warn: #8a6516;
+  --warn-soft: #f6efdc;
+  --bad: #9a3f2a;
+  --bad-soft: #f7e7e2;
+  --focus: #2a5687;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141518;
+    --surface: #1b1d21;
+    --surface-2: #23252a;
+    --ink: #e8e6e1;
+    --ink-2: #c4c2bd;
+    --muted: #93959c;
+    --line: #2e3036;
+    --line-strong: #3d4048;
+    --accent: #8db4e2;
+    --accent-soft: #1f2a38;
+    --ai: #b7a0dc;
+    --ai-soft: #29233a;
+    --ok: #7fc39b;
+    --ok-soft: #1c2b22;
+    --warn: #e0bd6b;
+    --warn-soft: #2e2817;
+    --bad: #e4917b;
+    --bad-soft: #33201b;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-ai: var(--ai);
+  --color-ai-soft: var(--ai-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Small component primitives kept here so markup stays readable. */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent bg-accent px-2.5 py-1.5 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-50;
+  }
+  .btn-ai {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-ai/30 bg-ai-soft px-2.5 py-1.5 text-[13px] font-medium text-ai transition-colors hover:border-ai/60 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .input {
+    @apply w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-[14px] text-ink placeholder:text-muted focus:border-accent focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-[12px] font-medium text-muted;
+  }
+  .card {
+    @apply rounded-lg border border-line bg-surface;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11.5px] text-ink-2;
+  }
+  .prose-research p {
+    @apply mb-2 leading-relaxed;
+  }
+  .prose-research ul {
+    @apply mb-2 list-disc pl-5;
+  }
+  .prose-research ol {
+    @apply mb-2 list-decimal pl-5;
+  }
+}

@@ -1,0 +1,330 @@
+/**
+ * Ordered, append-only schema migrations. Never edit a migration that has shipped;
+ * add a new one instead. Each runs inside a transaction and is recorded in
+ * `schema_migrations`.
+ *
+ * Conventions
+ *  - Every object has a TEXT primary key (prefixed random id, see lib/ids.ts)
+ *    plus created_at / updated_at ISO timestamps. This keeps a later move to
+ *    PostgreSQL (uuid/text keys, timestamptz) mechanical.
+ *  - `origin` columns record provenance: 'external' (feeds, APIs), 'user',
+ *    or 'ai'. The UI uses them to separate sourced material from AI output.
+ *  - JSON is stored as TEXT and parsed in the repository layer.
+ */
+export const migrations: { id: number; name: string; sql: string }[] = [
+  {
+    id: 1,
+    name: "core",
+    sql: `
+CREATE TABLE feeds (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL UNIQUE,
+  site_url TEXT,
+  region TEXT,
+  language TEXT DEFAULT 'en',
+  category TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  priority REAL NOT NULL DEFAULT 1,
+  last_fetched_at TEXT,
+  last_status TEXT,
+  last_error TEXT,
+  last_item_count INTEGER,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE clusters (
+  id TEXT PRIMARY KEY,
+  headline TEXT NOT NULL,
+  summary TEXT,
+  first_seen_at TEXT NOT NULL,
+  last_updated_at TEXT NOT NULL,
+  article_count INTEGER NOT NULL DEFAULT 0,
+  source_count INTEGER NOT NULL DEFAULT 0,
+  tokens TEXT NOT NULL DEFAULT '[]',
+  entities TEXT NOT NULL DEFAULT '[]',
+  regions TEXT NOT NULL DEFAULT '[]',
+  state TEXT NOT NULL DEFAULT 'new',          -- new | saved | dismissed
+  rating INTEGER NOT NULL DEFAULT 0,          -- -1, 0, 1
+  ai_brief TEXT,                              -- JSON, AI generated, cached
+  ai_assessment TEXT,                         -- JSON, AI editorial signal assessment
+  last_viewed_at TEXT,
+  is_sample INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_clusters_updated ON clusters(last_updated_at);
+CREATE INDEX idx_clusters_state ON clusters(state);
+
+CREATE TABLE articles (
+  id TEXT PRIMARY KEY,
+  feed_id TEXT REFERENCES feeds(id) ON DELETE SET NULL,
+  cluster_id TEXT REFERENCES clusters(id) ON DELETE SET NULL,
+  url TEXT NOT NULL,
+  canonical_url TEXT NOT NULL UNIQUE,
+  guid TEXT,
+  title TEXT NOT NULL,
+  summary TEXT,
+  author TEXT,
+  publisher TEXT,
+  published_at TEXT,
+  fetched_at TEXT NOT NULL,
+  language TEXT,
+  region TEXT,
+  image_url TEXT,
+  title_hash TEXT NOT NULL,
+  entities TEXT NOT NULL DEFAULT '[]',
+  is_sample INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX idx_articles_cluster ON articles(cluster_id);
+CREATE INDEX idx_articles_published ON articles(published_at);
+CREATE INDEX idx_articles_title_hash ON articles(title_hash);
+
+CREATE TABLE signals (
+  id TEXT PRIMARY KEY,                        -- slug
+  label TEXT NOT NULL,
+  description TEXT NOT NULL,
+  cues TEXT NOT NULL DEFAULT '[]',            -- JSON array of phrases / regex sources
+  weight REAL NOT NULL DEFAULT 1,             -- user-set preference
+  learned REAL NOT NULL DEFAULT 0,            -- adjusted by feedback
+  enabled INTEGER NOT NULL DEFAULT 1,
+  builtin INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE rules (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  action TEXT NOT NULL,                       -- boost | bury | hide
+  field TEXT NOT NULL DEFAULT 'any',          -- any | title | publisher | region
+  pattern TEXT NOT NULL,
+  weight REAL NOT NULL DEFAULT 2,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE term_weights (
+  term TEXT PRIMARY KEY,
+  weight REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE feedback (
+  id TEXT PRIMARY KEY,
+  cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,                         -- interesting | uninteresting | save | dismiss | restore
+  reasons TEXT NOT NULL DEFAULT '[]',         -- signal ids
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE projects (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  thesis TEXT,
+  description TEXT,
+  stage TEXT NOT NULL DEFAULT 'investigating',
+  angles TEXT,
+  gaps TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE project_items (
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  item_type TEXT NOT NULL,                    -- cluster | question | source | note
+  item_id TEXT NOT NULL,
+  note TEXT,
+  added_at TEXT NOT NULL,
+  PRIMARY KEY (project_id, item_type, item_id)
+);
+
+CREATE TABLE questions (
+  id TEXT PRIMARY KEY,
+  cluster_id TEXT REFERENCES clusters(id) ON DELETE SET NULL,
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  parent_id TEXT REFERENCES questions(id) ON DELETE SET NULL,
+  text TEXT NOT NULL,
+  dimension TEXT,
+  rationale TEXT,
+  answer_state TEXT NOT NULL DEFAULT 'unexamined',
+  priority INTEGER NOT NULL DEFAULT 2,        -- 1 high, 2 normal, 3 low
+  search_terms TEXT NOT NULL DEFAULT '[]',
+  origin TEXT NOT NULL,                       -- ai | user | assistant
+  followed INTEGER NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
+  position REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_questions_cluster ON questions(cluster_id);
+CREATE INDEX idx_questions_project ON questions(project_id);
+
+CREATE TABLE sources (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL DEFAULT 'other',         -- news | paper | report | government | statistics | law | archive | commentary | primary | reference | other
+  title TEXT NOT NULL,
+  authors TEXT,
+  publisher TEXT,
+  published_at TEXT,
+  url TEXT,
+  doi TEXT,
+  excerpt TEXT,                               -- abstract / description / supporting passage
+  retrieved_at TEXT NOT NULL,
+  provider TEXT NOT NULL,                     -- feed | openalex | crossref | wikipedia | gdelt | user
+  article_id TEXT REFERENCES articles(id) ON DELETE SET NULL,
+  notes TEXT,
+  saved INTEGER NOT NULL DEFAULT 0,           -- in the user's library
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX idx_sources_url ON sources(url) WHERE url IS NOT NULL;
+CREATE INDEX idx_sources_article ON sources(article_id);
+
+-- A source surfaced for (or attached to) a question. status: candidate | attached | rejected
+CREATE TABLE question_sources (
+  question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'candidate',
+  found_by TEXT,                              -- e.g. 'openalex:"query"'
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (question_id, source_id)
+);
+
+CREATE TABLE answers (
+  id TEXT PRIMARY KEY,
+  question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  level INTEGER NOT NULL DEFAULT 1,           -- 1 quick context, 2 source exploration, 3 deep research
+  state TEXT NOT NULL,                        -- established | partial | contested | insufficient | user
+  summary TEXT NOT NULL,
+  points TEXT NOT NULL DEFAULT '[]',          -- JSON AnswerPoint[]
+  caveats TEXT NOT NULL DEFAULT '[]',
+  next_steps TEXT NOT NULL DEFAULT '[]',
+  brief TEXT,                                 -- JSON (deep research structured brief)
+  origin TEXT NOT NULL,                       -- ai | user
+  model TEXT,
+  ai_request_id TEXT,
+  superseded INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_answers_question ON answers(question_id);
+
+-- Which source backs which claim of an answer.
+CREATE TABLE evidence (
+  id TEXT PRIMARY KEY,
+  answer_id TEXT NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+  claim TEXT NOT NULL,
+  passage TEXT,
+  relation TEXT NOT NULL DEFAULT 'supports',  -- supports | contradicts | context
+  created_at TEXT NOT NULL
+);
+CREATE INDEX idx_evidence_answer ON evidence(answer_id);
+CREATE INDEX idx_evidence_source ON evidence(source_id);
+
+-- Typed relationships between any two research objects.
+CREATE TABLE links (
+  id TEXT PRIMARY KEY,
+  from_type TEXT NOT NULL,
+  from_id TEXT NOT NULL,
+  to_type TEXT NOT NULL,
+  to_id TEXT NOT NULL,
+  relation TEXT NOT NULL,
+  note TEXT,
+  origin TEXT NOT NULL DEFAULT 'user',
+  created_at TEXT NOT NULL,
+  UNIQUE (from_type, from_id, to_type, to_id, relation)
+);
+CREATE INDEX idx_links_from ON links(from_type, from_id);
+CREATE INDEX idx_links_to ON links(to_type, to_id);
+
+CREATE TABLE notes (
+  id TEXT PRIMARY KEY,
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  cluster_id TEXT REFERENCES clusters(id) ON DELETE SET NULL,
+  question_id TEXT REFERENCES questions(id) ON DELETE SET NULL,
+  title TEXT,
+  body TEXT NOT NULL,
+  origin TEXT NOT NULL DEFAULT 'user',        -- user | assistant
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE chat_threads (
+  id TEXT PRIMARY KEY,
+  context_type TEXT NOT NULL,                 -- cluster | project | question
+  context_id TEXT NOT NULL,
+  title TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_chat_context ON chat_threads(context_type, context_id);
+
+CREATE TABLE chat_messages (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,                         -- user | assistant
+  content TEXT NOT NULL,
+  meta TEXT NOT NULL DEFAULT '{}',            -- JSON: cited sources, suggested questions
+  ai_request_id TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE ai_requests (
+  id TEXT PRIMARY KEY,
+  task TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  status TEXT NOT NULL,                       -- ok | cached | error | blocked
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL NOT NULL DEFAULT 0,
+  duration_ms INTEGER,
+  error TEXT,
+  cache_key TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX idx_ai_requests_created ON ai_requests(created_at);
+
+CREATE TABLE ai_cache (
+  key TEXT PRIMARY KEY,
+  task TEXT NOT NULL,
+  model TEXT NOT NULL,
+  response TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE ingest_runs (
+  id TEXT PRIMARY KEY,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  feeds_ok INTEGER NOT NULL DEFAULT 0,
+  feeds_failed INTEGER NOT NULL DEFAULT 0,
+  articles_new INTEGER NOT NULL DEFAULT 0,
+  articles_duplicate INTEGER NOT NULL DEFAULT 0,
+  clusters_new INTEGER NOT NULL DEFAULT 0,
+  trigger TEXT NOT NULL DEFAULT 'manual'
+);
+
+-- Unified full-text index, maintained by the repository layer on every write.
+CREATE VIRTUAL TABLE search_index USING fts5(
+  kind UNINDEXED,
+  ref_id UNINDEXED,
+  title,
+  body,
+  tokenize = 'porter unicode61 remove_diacritics 2'
+);
+`,
+  },
+];
