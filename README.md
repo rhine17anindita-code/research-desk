@@ -80,6 +80,8 @@ Default budgets: **$2/day, $20/month, $0.50 per task**. Calls that would exceed 
 
 Every answer separates **facts** (must cite a supplied source), **allegations**, **predictions**, **interpretations** and **hypotheses**. Citations are numbered chips linking to the original. Any citation the model invents is removed and the claim is marked *unsourced*; an "established" verdict without surviving evidence is downgraded to *insufficient*. If there is no source material, the app refuses to answer rather than guess.
 
+**Ideas** — Turns research into content you can make. *Untold stories* scores your database for overlooked material (covered by regional outlets but missed internationally, conflicting accounts, money and power, historical hooks, your open questions) — free. *Browse* is a deck of AI-generated ideas, one card at a time: title, hook, the untold angle, why it's untold, why it lands, format (YouTube, shorts/reels, carousels, threads, explainers, op-eds, essays, investigations, research briefs, calls to action, calls for papers, podcasts) and the stories and sources behind it. Skip (←), save (→) or develop (↑) — developing creates a research project with the story, sources and open questions, and the outline tool pre-set to that format. *Inspiration* collects links (YouTube, Instagram, TikTok, X, papers, articles) and notes with what you want from them; public metadata is fetched and related stories are matched for free, and the AI can explain why a piece works. *What it's learned* shows the patterns in your choices and an editable taste summary that is included in every AI request.
+
 **Research** — Projects with an editable pipeline (Discovered → Saved → Investigating → Research ready → In production → Published → Archived). A project gathers stories, questions (with their answers), an evidence library, gaps, angles, an outline, notes and its own assistant.
 
 **Library** — Sources with provenance (where each came from, when retrieved, what it supports), saved stories, all notes, and the full article archive. Add sources by hand; nothing is auto-filled.
@@ -103,6 +105,10 @@ Every answer separates **facts** (must cite a supplied source), **allegations**,
 | Quick context / Explore & answer | 1 | |
 | Assess top 15 stories | 1 | Batched |
 | Deep research | 2 | Plan + brief |
+| Generate a batch of ideas | 1 | 5–12 ideas per call |
+| Why does this inspiration work? | 1 | Uses your bulk model if set |
+| Update taste summary | 1 | Only when you click |
+| Untold stories, swipes, inspirations, develop-to-project | 0 | Always free |
 | Assistant message | 1 | |
 
 Typical costs with Opus 5.5 at medium effort are a few cents per action; Haiku 5.5 is roughly 40× cheaper. Exact token counts and estimated costs are in Settings → AI & usage.

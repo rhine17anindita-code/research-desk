@@ -1,6 +1,6 @@
 import type { DB } from "../db";
 
-export type SearchKind = "cluster" | "article" | "question" | "answer" | "source" | "note" | "project";
+export type SearchKind = "cluster" | "article" | "question" | "answer" | "source" | "note" | "project" | "idea" | "inspiration";
 
 /** Upsert one object into the unified full-text index. */
 export function indexItem(db: DB, kind: SearchKind, refId: string, title: string, body: string): void {

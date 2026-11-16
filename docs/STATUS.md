@@ -16,6 +16,7 @@ What the first version does, what is partial, and what comes next. Section lette
 | H | Research assistant | Per story / project / question; uses coverage, questions, saved answers, sources and notes; optional extra retrieval; save replies as notes and suggestions as questions. |
 | I | Connections | Typed, labelled links between stories, questions, sources and projects; related stories computed locally. |
 | J | AI config & cost controls | Server-only keys; provider and model choice; effort; per-task/daily/monthly budgets; cost estimates before running; cache; usage log; works fully with AI off. |
+| — | Content ideation | Untold-story finder (local scoring), AI idea batches across 12 formats backed by stories/sources, swipe deck with reasons and undo, saved board (saved → developing → made), develop-to-project, inspiration inbox with oEmbed/OpenGraph/Crossref metadata and local story matching, AI "why it works", taste stats and an editable AI taste summary injected into all prompts. |
 | — | Search | Unified local full-text search with filters. |
 | — | Tests & docs | 30 tests including an end-to-end research journey; README, architecture, this status page. |
 

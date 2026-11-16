@@ -23,6 +23,9 @@ export interface AppSettings {
   "retrieval.providers": { openalex: boolean; crossref: boolean; wikipedia: boolean; gdelt: boolean };
   /** Free-text description of the researcher, audience and format; steers AI output. */
   "profile.about": string;
+  /** AI-written (user-editable) summary of what the user's behaviour shows they like. */
+  "taste.summary": string;
+  "taste.updated_at": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -48,4 +51,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ],
   "retrieval.providers": { openalex: true, crossref: true, wikipedia: true, gdelt: true },
   "profile.about": "",
+  "taste.summary": "",
+  "taste.updated_at": "",
 };

@@ -9,6 +9,7 @@ import { createQuestion, getQuestion, isDuplicateQuestion, listAnswers, listQues
 import { BUILTIN_SIGNALS } from "../signals";
 import { truncate, keywordQuery } from "../text";
 import { getSetting } from "../repo/settings";
+import { personalContext } from "../ideation/personal";
 import { relatedStories } from "../repo/stories";
 import { searchLocal, searchWikipedia } from "./retrieval";
 import { exploreSources, type ExploreResult } from "./retrieval";
@@ -22,10 +23,9 @@ import { QUESTION_DIMENSIONS, type Answer, type AnswerPoint, type ClaimKind, typ
  *  - validates citations against the exact sources it supplied.
  */
 
-/** The researcher's own description of themselves, their audience and format (Settings → Personalisation). */
+/** Profile + learned taste, shared by every AI task. */
 function profileBlock(db: DB): string {
-  const about = getSetting(db, "profile.about").trim();
-  return about ? `ABOUT THE RESEARCHER (tailor relevance, angles and next steps to this):\n${truncate(about, 1500)}` : "";
+  return personalContext(db);
 }
 
 const UNTRUSTED_NOTE =
@@ -162,7 +162,7 @@ export async function generateQuestions(
     user,
     schema: QuestionsSchema,
     maxTokens: 6000,
-    cacheParts: [clusterId, articles.map((a) => a.id), existing.map((q) => q.text), opts.guidance ?? "", count, getSetting(db, "profile.about")],
+    cacheParts: [clusterId, articles.map((a) => a.id), existing.map((q) => q.text), opts.guidance ?? "", count, personalContext(db)],
     bypassCache: !!opts.regenerate,
   };
   if (opts.estimateOnly) return { estimate: estimateTaskCost(db, task) };

@@ -81,7 +81,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </section>
           <ProjectField id={id} field="description" value={project.description} label="Working notes / outline" placeholder="Structure, sequence, key scenes, what to show…" />
 
-          <CreatorPanel projectId={id} />
+          <CreatorPanel projectId={id} defaultFormat={(db.prepare("SELECT format FROM ideas WHERE project_id = ? LIMIT 1").get(id) as { format: string } | undefined)?.format} />
 
           <NotesPanel notes={notes} projectId={id} />
         </div>

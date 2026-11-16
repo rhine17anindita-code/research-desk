@@ -4,18 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AiButton } from "./AiButton";
 
-const FORMATS: [string, string][] = [
-  ["youtube-explainer", "YouTube explainer (6–12 min)"],
-  ["short-video", "Short video / reel"],
-  ["article", "Explanatory article"],
-  ["investigation", "Investigative piece"],
-  ["thread", "Social thread"],
-];
+import { CONTENT_FORMATS } from "@/lib/ideation/formats";
+
+const FORMATS: [string, string][] = CONTENT_FORMATS.map((f) => [f.id, `${f.label} — ${f.platform}`]);
 
 /** Turn the project's research into output. AI drafts land in Notes, marked as assistant drafts. */
-export function CreatorPanel({ projectId }: { projectId: string }) {
+export function CreatorPanel({ projectId, defaultFormat }: { projectId: string; defaultFormat?: string }) {
   const router = useRouter();
-  const [format, setFormat] = useState("youtube-explainer");
+  const [format, setFormat] = useState(defaultFormat ?? "youtube-long");
   const [angle, setAngle] = useState("");
   return (
     <section className="card p-4">

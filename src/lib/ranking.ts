@@ -4,6 +4,7 @@ import { detectSignals, type SignalMatch } from "./signals";
 import { getSetting } from "./repo/settings";
 import { nowIso } from "./ids";
 import { uniqueTokens } from "./text";
+import { recordTaste } from "./ideation/repo";
 
 /**
  * Transparent, rule-based ranking. No model calls. Every score comes with a
@@ -280,11 +281,13 @@ export function recordFeedback(
     );
     switch (kind) {
       case "interesting":
+        recordTaste(db, { kind: "story-like", objectType: "cluster", objectId: clusterId, tags: tok, reason: reasons.join(",") || null });
         db.prepare("UPDATE clusters SET rating = 1, updated_at = ? WHERE id = ?").run(now, clusterId);
         bumpTerms(0.15);
         bumpSignals(reasons.length ? reasons : detected, reasons.length ? 0.25 : 0.08);
         break;
       case "uninteresting":
+        recordTaste(db, { kind: "story-dislike", objectType: "cluster", objectId: clusterId, tags: tok });
         db.prepare("UPDATE clusters SET rating = -1, updated_at = ? WHERE id = ?").run(now, clusterId);
         bumpTerms(-0.15);
         bumpSignals(detected, -0.05);

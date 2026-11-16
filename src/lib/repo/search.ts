@@ -103,6 +103,16 @@ function resolve(db: DB, kind: SearchKind, id: string, f: SearchFilters): { titl
       const href = r.project_id ? `/research/${r.project_id}` : r.question_id ? `/question/${r.question_id}` : r.cluster_id ? `/story/${r.cluster_id}` : `/library?tab=notes`;
       return { title: r.title || r.body.slice(0, 100), date: r.updated_at, meta: "Note", href };
     }
+    case "idea": {
+      const r = db.prepare("SELECT title, format, status, updated_at FROM ideas WHERE id = ?").get(id) as { title: string; format: string; status: string; updated_at: string } | undefined;
+      if (!r || f.projectId) return null;
+      return { title: r.title, date: r.updated_at, meta: `Idea · ${r.format} · ${r.status}`, href: `/ideas/${id}` };
+    }
+    case "inspiration": {
+      const r = db.prepare("SELECT title, url, kind, created_at FROM inspirations WHERE id = ?").get(id) as { title: string | null; url: string | null; kind: string; created_at: string } | undefined;
+      if (!r || f.projectId) return null;
+      return { title: r.title ?? r.url ?? "Inspiration", date: r.created_at, meta: `Inspiration · ${r.kind}`, href: `/ideas/inspiration#${id}` };
+    }
     case "project": {
       const r = db.prepare("SELECT title, stage, updated_at FROM projects WHERE id = ?").get(id) as { title: string; stage: string; updated_at: string } | undefined;
       if (!r || (f.projectId && f.projectId !== id)) return null;

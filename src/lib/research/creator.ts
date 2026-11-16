@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { DB } from "../db";
 import { estimateTaskCost, runAiTask } from "../ai/service";
 import { createNote } from "../repo/projects";
-import { getSetting } from "../repo/settings";
+import { personalContext } from "../ideation/personal";
+import { FORMAT_BY_ID } from "../ideation/formats";
 import { sourceForArticle } from "../repo/sources";
 import { truncate } from "../text";
 import { buildDossier } from "./dossier";
@@ -22,7 +23,15 @@ export const FORMATS = {
   investigation: "Investigative piece (long-form)",
   thread: "Social thread (8–12 posts)",
 } as const;
-export type FormatId = keyof typeof FORMATS;
+export type FormatId = keyof typeof FORMATS | string;
+
+/** Outline target: the classic outline formats plus every ideation format. */
+function formatLabel(id: string): string {
+  const fixed = (FORMATS as Record<string, string>)[id];
+  if (fixed) return fixed;
+  const f = FORMAT_BY_ID[id];
+  return f ? `${f.label} (${f.platform}) — ${f.craft}` : FORMATS["youtube-explainer"];
+}
 
 const AnglesSchema = z.object({
   angles: z.array(
@@ -57,9 +66,8 @@ function material(db: DB, projectId: string) {
   if (!d) return null;
   const storySources = d.storyBlocks.flatMap((b) => b.articles.slice(0, 6).map((a) => sourceForArticle(db, a.id)).filter((s): s is Source => !!s));
   const pack = buildSourcePack([...d.refs, ...storySources], 30000, 900);
-  const about = getSetting(db, "profile.about").trim();
   const text = [
-    about ? `ABOUT THE CREATOR:\n${truncate(about, 1500)}` : "",
+    personalContext(db),
     `PROJECT: ${d.project.title}`,
     d.project.thesis ? `THESIS / QUESTION: ${d.project.thesis}` : "",
     d.storyBlocks.length ? `STORIES:\n${d.storyBlocks.map((b) => `- ${b.story.headline}`).join("\n")}` : "",
@@ -128,7 +136,7 @@ export async function findAngles(db: DB, projectId: string, opts: { estimateOnly
 export async function draftOutline(db: DB, projectId: string, opts: { format: FormatId; estimateOnly?: boolean; regenerate?: boolean; angle?: string }): Promise<TaskOutcome<Note>> {
   const m = material(db, projectId);
   if (!m) return { ok: false, reason: "provider_error", message: "Project not found" };
-  const format = FORMATS[opts.format] ?? FORMATS["youtube-explainer"];
+  const format = formatLabel(opts.format);
   const task = {
     task: "creator.outline",
     system: `${SYSTEM_BASE}\nWrite a production outline for: ${format}. Structure it the way that format works (for video: cold open/hook, context, escalating beats, payoff, close; for articles: lede, nut graf, sections, kicker). Each beat is one or two sentences of what is said or shown, with cited sources for factual beats. open_checks lists every claim that must be confirmed before publishing. visuals_or_assets lists maps, documents, charts, footage or quotes to gather.`,
@@ -153,6 +161,6 @@ export async function draftOutline(db: DB, projectId: string, opts: { format: Fo
     o.open_checks.length ? `\nCheck before publishing:\n${o.open_checks.map((c) => `- ${c}`).join("\n")}` : "",
     o.visuals_or_assets.length ? `\nAssets to gather:\n${o.visuals_or_assets.map((c) => `- ${c}`).join("\n")}` : "",
   ].join("\n");
-  const note = createNote(db, { projectId, title: `Outline — ${format} (AI draft — verify before use)`, body: body + referenceList(order, m.pack), origin: "assistant" });
+  const note = createNote(db, { projectId, title: `Outline — ${FORMAT_BY_ID[opts.format]?.label ?? format.split(" (")[0]} (AI draft — verify before use)`, body: body + referenceList(order, m.pack), origin: "assistant" });
   return { ...res, data: note };
 }

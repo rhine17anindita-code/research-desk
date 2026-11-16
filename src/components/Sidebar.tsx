@@ -10,6 +10,7 @@ import { Icon } from "./Icon";
 
 const NAV = [
   { href: "/discover", label: "Discover", icon: "discover" },
+  { href: "/ideas", label: "Ideas", icon: "bulb" },
   { href: "/explore", label: "Explore", icon: "explore" },
   { href: "/research", label: "Research", icon: "research" },
   { href: "/library", label: "Library", icon: "library" },

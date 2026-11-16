@@ -327,4 +327,66 @@ CREATE VIRTUAL TABLE search_index USING fts5(
 );
 `,
   },
+  {
+    id: 2,
+    name: "ideation",
+    sql: `
+-- Content ideas: actionable, platform-specific angles backed by research objects.
+CREATE TABLE ideas (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  hook TEXT,
+  angle TEXT,                                  -- the untold angle
+  why_untold TEXT,                             -- why mainstream coverage has missed it
+  why_it_lands TEXT,                           -- why the audience would care
+  format TEXT NOT NULL,                        -- see lib/ideation/formats.ts
+  medium TEXT NOT NULL DEFAULT 'visual',       -- visual | written
+  angle_type TEXT,                             -- e.g. hidden-history, follow-the-money
+  backing TEXT NOT NULL DEFAULT '{}',          -- JSON {clusters:[], sources:[], questions:[]}
+  open_questions TEXT NOT NULL DEFAULT '[]',
+  effort TEXT,                                 -- low | medium | high
+  timeliness TEXT,                             -- evergreen | timely | breaking
+  status TEXT NOT NULL DEFAULT 'new',          -- new | saved | skipped | developing | made | dropped
+  reason TEXT,                                 -- why skipped/saved, from the user
+  origin TEXT NOT NULL DEFAULT 'ai',           -- ai | user
+  batch_id TEXT,
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  inspiration_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_ideas_status ON ideas(status);
+
+-- Things the user found inspiring: links or notes, with what they want from them.
+CREATE TABLE inspirations (
+  id TEXT PRIMARY KEY,
+  url TEXT,
+  kind TEXT NOT NULL DEFAULT 'other',          -- youtube | instagram | tiktok | x | paper | article | text | other
+  title TEXT,
+  author TEXT,
+  description TEXT,
+  thumbnail TEXT,
+  note TEXT,                                   -- the user's own words: why it matters
+  intents TEXT NOT NULL DEFAULT '[]',          -- recreate-format | cover-topic | dig-deeper | other-angles
+  analysis TEXT,                               -- JSON, AI analysis (on request)
+  matched_clusters TEXT NOT NULL DEFAULT '[]', -- locally matched stories
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Behaviour signals that personalise ideation (all local; summarised by AI only on request).
+CREATE TABLE taste_events (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,                          -- idea-save | idea-skip | idea-develop | idea-made | inspiration | story-like | story-dislike
+  object_type TEXT,
+  object_id TEXT,
+  format TEXT,
+  angle_type TEXT,
+  tags TEXT NOT NULL DEFAULT '[]',             -- words/entities characterising the object
+  reason TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX idx_taste_created ON taste_events(created_at);
+`,
+  },
 ];
