@@ -9,7 +9,7 @@ Research Desk runs as a Node.js web app. On Hostinger that needs a **Business we
 3. Choose **Import your Git repository → Continue with GitHub**, authorise if asked, and select **research-desk**.
 4. **Build configuration**
    - Framework preset: **Next.js**
-   - Node version: **22.x** (20.x also works)
+   - Node version: **22.x** or **24.x** (not 20.x: the SQLite driver needs Node 22+)
    - Root directory: `/` · Branch: `main`
    - Package manager: **npm** · Build command: `npm run build` (start command, if asked: `npm start`)
 

@@ -8,7 +8,7 @@ Ordinary use — reading, ranking, searching, organising, following connections,
 
 ## Quick start
 
-Requirements: **Node.js 20+** (tested on 24) and npm. No other services.
+Requirements: **Node.js 22+** (tested on 24) and npm. No other services.
 
 ```bash
 cd research-desk
