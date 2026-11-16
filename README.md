@@ -21,7 +21,9 @@ npm run dev                     # http://localhost:3100
 
 Open <http://localhost:3100>. If you are offline, *Discover* offers to load a handful of clearly labelled **fictional** sample stories so you can try the workflow; remove them in Settings → Sources.
 
-For a production-style run: `npm run build && npm start`.
+For a production-style run: `npm run build && npm start` (set `SITE_PASSWORD` first — in production the app stays locked without one, unless you set `ALLOW_OPEN_ACCESS=true`).
+
+**Putting it online:** see [docs/DEPLOY-HOSTINGER.md](docs/DEPLOY-HOSTINGER.md). Any Node.js host with a persistent disk works the same way.
 
 ### Enabling AI (optional)
 
@@ -43,6 +45,9 @@ Default budgets: **$2/day, $20/month, $0.50 per task**. Calls that would exceed 
 | `OPENAI_COMPAT_BASE_URL`, `OPENAI_COMPAT_API_KEY` | Alternative provider (select it in Settings). |
 | `DATABASE_PATH` | Where the SQLite file lives (default `./data/research-desk.db`). |
 | `INGEST_INTERVAL_MINUTES` | Refresh feeds automatically while the server runs (≥ 5; default off). |
+| `SITE_PASSWORD` | Password protecting the whole site (required in production). |
+| `SESSION_SECRET` | Optional separate secret for signing sessions. |
+| `ALLOW_OPEN_ACCESS` | `true` to run in production without a password (not recommended). |
 | `OPENALEX_MAILTO` | Optional contact for OpenAlex's faster "polite pool". Left empty, requests are anonymous. |
 
 ### Commands
@@ -107,6 +112,7 @@ Typical costs with Opus 5.5 at medium effort are a few cents per action; Haiku 5
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it is built
+- [docs/DEPLOY-HOSTINGER.md](docs/DEPLOY-HOSTINGER.md) — putting it online
 - [docs/STATUS.md](docs/STATUS.md) — what is implemented, partial or deferred, and the next priorities
 
 ## Content and sources

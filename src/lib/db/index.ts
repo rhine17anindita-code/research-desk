@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { migrations } from "./migrations";
 import { seedDefaults } from "./seed";
@@ -10,7 +11,11 @@ const globalForDb = globalThis as unknown as { __researchDb?: DB };
 
 export function resolveDbPath(): string {
   const p = process.env.DATABASE_PATH?.trim();
-  return p ? path.resolve(p) : path.resolve(process.cwd(), "data", "research-desk.db");
+  if (p) return path.resolve(p.startsWith("~/") ? path.join(os.homedir(), p.slice(2)) : p);
+  // Hosts that rebuild the app folder on every deploy (e.g. Hostinger's ".../hbuilds/...")
+  // would wipe a database stored inside it, so keep it in the home directory instead.
+  if (/[\\/](hbuilds|releases|versions)[\\/]/.test(process.cwd())) return path.join(os.homedir(), "research-desk-data", "research-desk.db");
+  return path.resolve(process.cwd(), "data", "research-desk.db");
 }
 
 export function migrate(db: DB): void {

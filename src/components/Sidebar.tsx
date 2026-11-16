@@ -14,9 +14,10 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
-export function Sidebar({ ai }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number } }) {
+export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number }; canSignOut?: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  if (path === "/login") return null;
   const active = (href: string) =>
     path === href || path.startsWith(href + "/") || (href === "/explore" && (path.startsWith("/story") || path.startsWith("/question")));
 
@@ -37,6 +38,18 @@ export function Sidebar({ ai }: { ai: { available: boolean; reason: string | nul
       ))}
     </nav>
   );
+
+  const signOut = canSignOut ? (
+    <button
+      className="btn-ghost mt-2 w-full justify-start !text-[12px]"
+      onClick={async () => {
+        await fetch("/api/logout", { method: "POST" });
+        window.location.href = "/login";
+      }}
+    >
+      Sign out
+    </button>
+  ) : null;
 
   const status = (
     <Link href="/settings?tab=ai" className="block rounded-md border border-line bg-surface px-3 py-2.5 text-[12px] hover:border-line-strong">
@@ -63,7 +76,7 @@ export function Sidebar({ ai }: { ai: { available: boolean; reason: string | nul
       {open && (
         <div className="fixed inset-x-0 top-[49px] z-30 border-b border-line bg-paper p-3 shadow-lg md:hidden">
           {nav}
-          <div className="mt-3">{status}</div>
+          <div className="mt-3">{status}{signOut}</div>
         </div>
       )}
       <aside className="sticky top-0 hidden h-screen w-[208px] shrink-0 flex-col justify-between border-r border-line px-3 py-4 md:flex">
@@ -74,7 +87,10 @@ export function Sidebar({ ai }: { ai: { available: boolean; reason: string | nul
           </Link>
           {nav}
         </div>
-        {status}
+        <div>
+          {status}
+          {signOut}
+        </div>
       </aside>
     </>
   );
