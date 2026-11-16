@@ -6,6 +6,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { getDb } from "@/lib/db";
 import { getAiStatus } from "@/lib/ai/service";
 import { authMode } from "@/lib/auth";
+import { activeChannelId, listChannels } from "@/lib/channels";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif", display: "swap", axes: ["opsz"] });
@@ -27,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans text-[14px]">
         <div className="flex min-h-screen flex-col md:flex-row">
-          <Sidebar ai={{ available: ai.available, reason: ai.unavailableReason, model: ai.model, spentToday: ai.spentToday, dailyLimit: ai.dailyLimit }} canSignOut={authMode() === "password"} />
+          <Sidebar ai={{ available: ai.available, reason: ai.unavailableReason, model: ai.model, spentToday: ai.spentToday, dailyLimit: ai.dailyLimit }} canSignOut={authMode() === "password"} channels={{ list: listChannels(getDb()).map((c) => ({ id: c.id, name: c.name })), active: activeChannelId(getDb()) }} />
           <main className="min-w-0 flex-1">{children}</main>
         </div>
         <CommandPalette />

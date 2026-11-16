@@ -26,6 +26,7 @@ export function addFixtureFeeds(db: DB) {
   db.prepare("INSERT INTO feeds (id, name, url, region, enabled, priority, created_at, updated_at) VALUES ('feed_a', 'Alpha News', 'https://alpha.example.com/rss', 'Sample', 1, 1, ?, ?)").run(now, now);
   db.prepare("INSERT INTO feeds (id, name, url, region, enabled, priority, created_at, updated_at) VALUES ('feed_b', 'Beta Wire', 'https://beta.example.org/atom', 'Sample', 1, 1, ?, ?)").run(now, now);
   db.prepare("INSERT INTO feeds (id, name, url, region, enabled, priority, created_at, updated_at) VALUES ('feed_c', 'Broken Feed', 'https://broken.example.net/rss', 'Sample', 1, 1, ?, ?)").run(now, now);
+  for (const f of ["feed_a", "feed_b", "feed_c"]) db.prepare("INSERT OR IGNORE INTO channel_feeds (channel_id, feed_id) VALUES ('ch_default', ?)").run(f);
 }
 
 export async function fixtureFetcher(url: string): Promise<string> {

@@ -2,6 +2,7 @@ import type { DB } from "../db";
 import { newId, nowIso } from "../ids";
 import type { Note, Project } from "../types";
 import { indexItem, unindexItem } from "./search-index";
+import { activeChannelId } from "../channels";
 
 interface ProjectRow { id: string; title: string; thesis: string | null; description: string | null; stage: string; angles: string | null; gaps: string | null; created_at: string; updated_at: string }
 
@@ -16,8 +17,8 @@ function reindexProject(db: DB, p: Project) {
 export function createProject(db: DB, input: { title: string; thesis?: string | null; description?: string | null; stage?: string }): Project {
   const id = newId("prj");
   const now = nowIso();
-  db.prepare("INSERT INTO projects (id, title, thesis, description, stage, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-    id, input.title.trim(), input.thesis ?? null, input.description ?? null, input.stage ?? "investigating", now, now,
+  db.prepare("INSERT INTO projects (id, title, thesis, description, stage, channel_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+    id, input.title.trim(), input.thesis ?? null, input.description ?? null, input.stage ?? "investigating", activeChannelId(db), now, now,
   );
   const p = getProject(db, id)!;
   reindexProject(db, p);
@@ -30,7 +31,7 @@ export function getProject(db: DB, id: string): Project | null {
 }
 
 export function listProjects(db: DB): (Project & { counts: Record<string, number> })[] {
-  const rows = db.prepare("SELECT * FROM projects ORDER BY updated_at DESC").all() as ProjectRow[];
+  const rows = db.prepare("SELECT * FROM projects WHERE channel_id = ? OR channel_id IS NULL ORDER BY updated_at DESC").all(activeChannelId(db)) as ProjectRow[];
   const cnt = db.prepare("SELECT item_type, COUNT(*) AS n FROM project_items WHERE project_id = ? GROUP BY item_type");
   const notes = db.prepare("SELECT COUNT(*) AS n FROM notes WHERE project_id = ?");
   return rows.map((r) => {

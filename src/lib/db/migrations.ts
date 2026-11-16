@@ -389,4 +389,59 @@ CREATE TABLE taste_events (
 CREATE INDEX idx_taste_created ON taste_events(created_at);
 `,
   },
+  {
+    id: 3,
+    name: "channels",
+    sql: `
+-- Channels: separate creator personalities/brands sharing one news database.
+CREATE TABLE channels (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  profile TEXT NOT NULL DEFAULT '',           -- who/what/audience/format, steers all AI
+  taste_summary TEXT NOT NULL DEFAULT '',
+  taste_updated_at TEXT,
+  geo TEXT NOT NULL DEFAULT 'US',             -- country code for trending searches
+  daily_ideas INTEGER NOT NULL DEFAULT 0,     -- opt-in: generate a fresh batch each day
+  last_daily_at TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE channel_feeds (
+  channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  feed_id TEXT NOT NULL REFERENCES feeds(id) ON DELETE CASCADE,
+  PRIMARY KEY (channel_id, feed_id)
+);
+
+INSERT INTO channels (id, name, description, profile, taste_summary, taste_updated_at, geo, position, created_at, updated_at)
+VALUES (
+  'ch_default', 'Politics & current affairs', 'News, geopolitics, power and history',
+  COALESCE((SELECT json_extract(value, '$') FROM settings WHERE key = 'profile.about'), ''),
+  COALESCE((SELECT json_extract(value, '$') FROM settings WHERE key = 'taste.summary'), ''),
+  (SELECT json_extract(value, '$') FROM settings WHERE key = 'taste.updated_at'),
+  'BD', 0, datetime('now'), datetime('now')
+);
+INSERT INTO channels (id, name, description, geo, position, created_at, updated_at)
+VALUES ('ch_culture', 'Books, film & culture', 'Books, cinema, music, pop culture and the stories behind them', 'BD', 1, datetime('now'), datetime('now'));
+
+INSERT INTO channel_feeds (channel_id, feed_id) SELECT 'ch_default', id FROM feeds;
+
+ALTER TABLE ideas ADD COLUMN channel_id TEXT;
+ALTER TABLE inspirations ADD COLUMN channel_id TEXT;
+ALTER TABLE taste_events ADD COLUMN channel_id TEXT;
+ALTER TABLE projects ADD COLUMN channel_id TEXT;
+UPDATE ideas SET channel_id = 'ch_default';
+UPDATE inspirations SET channel_id = 'ch_default';
+UPDATE taste_events SET channel_id = 'ch_default';
+UPDATE projects SET channel_id = 'ch_default';
+
+-- Ideas can now carry packaging (title options, thumbnail, scores) and expansions of the user's own ideas.
+ALTER TABLE ideas ADD COLUMN packaging TEXT;   -- JSON {titles:[], thumbnail, firstSeconds, scores:{...}}
+ALTER TABLE ideas ADD COLUMN expansion TEXT;   -- JSON for user-pitched ideas: angles, outline, next steps, leads
+ALTER TABLE ideas ADD COLUMN proposal TEXT;    -- Markdown proposal / pitch document
+ALTER TABLE ideas ADD COLUMN pitch TEXT;       -- the user's own words
+ALTER TABLE ideas ADD COLUMN source_kind TEXT; -- news | trend | history | archive | statement | inspiration | pitch
+`,
+  },
 ];

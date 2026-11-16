@@ -4,6 +4,9 @@ import { listProjects } from "@/lib/repo/projects";
 import { getSetting } from "@/lib/repo/settings";
 import { NewProject } from "@/components/ProjectComponents";
 import { timeAgo } from "@/lib/format";
+import { storiesUnderInvestigation } from "@/lib/repo/stories";
+import { listQuestions } from "@/lib/repo/questions";
+import { StateBadge } from "@/components/research/Badges";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +16,12 @@ export default function ResearchPage() {
   const stages = getSetting(db, "pipeline.stages");
   const known = new Set(stages.map((s) => s.id));
   const columns = [...stages, ...(projects.some((p) => !known.has(p.stage)) ? [{ id: "__other", label: "Other" }] : [])];
+
+  const investigating = storiesUnderInvestigation(db, 12);
+  const openIds = (db.prepare(
+    `SELECT id FROM questions WHERE archived = 0 AND answer_state IN ('needs-investigation', 'open', 'contested', 'partial') ORDER BY followed DESC, priority ASC, updated_at DESC LIMIT 8`,
+  ).all() as { id: string }[]).map((r) => r.id);
+  const openQs = listQuestions(db, { ids: openIds });
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -53,6 +62,31 @@ export default function ResearchPage() {
         </div>
         <div className="space-y-4">
           <NewProject />
+          <section className="card p-4">
+            <div className="eyebrow mb-2">Stories you&apos;re investigating</div>
+            <ul className="space-y-2">
+              {investigating.map((s) => (
+                <li key={s.id}>
+                  <Link href={`/story/${s.id}`} className="text-[13px] font-medium leading-snug text-ink hover:underline">{s.headline}</Link>
+                  <div className="text-[11.5px] text-muted">{s.questionCount} questions · {s.answeredCount} answered · {timeAgo(s.lastUpdatedAt)}</div>
+                </li>
+              ))}
+              {!investigating.length && <li className="text-[12.5px] text-muted">Open a story and add questions — it appears here.</li>}
+            </ul>
+          </section>
+          {openQs.length > 0 && (
+            <section className="card p-4">
+              <div className="eyebrow mb-2">Open questions</div>
+              <ul className="space-y-2">
+                {openQs.map((q) => (
+                  <li key={q.id}>
+                    <StateBadge state={q.answerState} />
+                    <Link href={`/question/${q.id}`} className="mt-0.5 block text-[13px] leading-snug text-ink hover:underline">{q.text}</Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <p className="text-[12.5px] leading-relaxed text-muted">
             You can also add stories, questions and sources to a project from anywhere using <b>Add to project</b>.
           </p>

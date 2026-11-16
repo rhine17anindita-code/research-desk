@@ -10,6 +10,8 @@ export default async function UntoldPage({ searchParams }: { searchParams: Promi
   const days = Number(sp.days ?? 7);
   const opps = findOpportunities(getDb(), { limit: 40, days, excludeUsed: false });
   return (
+    <>
+    <h1 className="mb-4 font-serif text-[26px] font-semibold tracking-tight">Untold stories</h1>
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <p className="max-w-2xl text-[13px] text-muted">
@@ -25,5 +27,6 @@ export default async function UntoldPage({ searchParams }: { searchParams: Promi
       </div>
       <UntoldList opps={opps} />
     </div>
+    </>
   );
 }

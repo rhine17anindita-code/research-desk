@@ -5,6 +5,7 @@ import { getSetting } from "./repo/settings";
 import { nowIso } from "./ids";
 import { uniqueTokens } from "./text";
 import { recordTaste } from "./ideation/repo";
+import { activeChannelId, CHANNEL_CLUSTER_SQL } from "./channels";
 
 /**
  * Transparent, rule-based ranking. No model calls. Every score comes with a
@@ -148,6 +149,7 @@ export interface RankedCluster {
   questionCount: number;
   topQuestion: string | null;
   inProjects: number;
+  image: string | null;
   score: ScoreBreakdown;
 }
 
@@ -173,8 +175,8 @@ export function rankFeed(db: DB, query: FeedQuery = {}): { items: RankedCluster[
   const since = new Date(Date.now() - hours * 3_600_000).toISOString();
   const view = query.view ?? "ranked";
 
-  const where: string[] = [];
-  const params: unknown[] = [];
+  const where: string[] = [CHANNEL_CLUSTER_SQL];
+  const params: unknown[] = [activeChannelId(db)];
   if (view === "saved") where.push("c.state = 'saved'");
   else if (view === "dismissed") where.push("c.state = 'dismissed'");
   else {
@@ -191,14 +193,14 @@ export function rankFeed(db: DB, query: FeedQuery = {}): { items: RankedCluster[
   const rows = db.prepare(`SELECT c.* FROM clusters c WHERE ${where.join(" AND ")} ORDER BY c.last_updated_at DESC LIMIT 1500`).all(...params) as ClusterRow[];
 
   const memberStmt = db.prepare(
-    `SELECT a.title, a.summary, a.publisher, COALESCE(f.priority, 1) AS priority FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.cluster_id = ?`,
+    `SELECT a.title, a.summary, a.publisher, a.image_url, COALESCE(f.priority, 1) AS priority FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.cluster_id = ?`,
   );
   const qStmt = db.prepare("SELECT COUNT(*) AS n, (SELECT text FROM questions WHERE cluster_id = ? AND archived = 0 ORDER BY priority ASC, position ASC LIMIT 1) AS top FROM questions WHERE cluster_id = ? AND archived = 0");
   const pStmt = db.prepare("SELECT COUNT(*) AS n FROM project_items WHERE item_type = 'cluster' AND item_id = ?");
 
   const scored: RankedCluster[] = [];
   for (const r of rows) {
-    const members = memberStmt.all(r.id) as { title: string; summary: string | null; publisher: string | null; priority: number }[];
+    const members = memberStmt.all(r.id) as { title: string; summary: string | null; publisher: string | null; image_url: string | null; priority: number }[];
     const publishers = [...new Set(members.map((m) => m.publisher ?? "Unknown"))];
     if (query.publisher && !publishers.includes(query.publisher)) continue;
     const tok = parseJson<{ t: string[]; a: string[] }>(r.tokens, { t: [], a: [] });
@@ -239,6 +241,7 @@ export function rankFeed(db: DB, query: FeedQuery = {}): { items: RankedCluster[
       questionCount: qs.n,
       topQuestion: qs.top,
       inProjects: (pStmt.get(r.id) as { n: number }).n,
+      image: members.find((m) => m.image_url)?.image_url ?? null,
       score,
     });
   }

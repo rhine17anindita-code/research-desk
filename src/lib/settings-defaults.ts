@@ -26,6 +26,7 @@ export interface AppSettings {
   /** AI-written (user-editable) summary of what the user's behaviour shows they like. */
   "taste.summary": string;
   "taste.updated_at": string;
+  "channel.active": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -53,4 +54,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "profile.about": "",
   "taste.summary": "",
   "taste.updated_at": "",
+  "channel.active": "ch_default",
 };

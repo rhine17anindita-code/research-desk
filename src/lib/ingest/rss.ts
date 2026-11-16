@@ -25,7 +25,7 @@ type RawItem = Record<string, unknown> & {
 
 const parser = new Parser<Record<string, unknown>, RawItem>({
   timeout: 15000,
-  customFields: { item: [["media:content", "mediaContent", { keepArray: false }], ["media:thumbnail", "mediaThumbnail"], ["dc:date", "dcDate"], ["description", "description"]] },
+  customFields: { item: [["media:content", "mediaContent", { keepArray: false }], ["media:thumbnail", "mediaThumbnail"], ["dc:date", "dcDate"], ["description", "description"], ["media:group", "mediaGroup"]] },
 });
 
 export const USER_AGENT = "ResearchDesk/0.1 (+local research tool; RSS reader)";
@@ -61,6 +61,8 @@ function parseDate(...candidates: unknown[]): string | null {
 function imageOf(item: RawItem): string | null {
   const mc = item.mediaContent as { $?: { url?: string } } | undefined;
   const mt = item.mediaThumbnail as { $?: { url?: string } } | undefined;
+  const mg = item.mediaGroup as { "media:thumbnail"?: { $?: { url?: string } }[] } | undefined;
+  if (mg?.["media:thumbnail"]?.[0]?.$?.url) return mg["media:thumbnail"][0].$.url;
   if (mc?.$?.url) return mc.$.url;
   if (mt?.$?.url) return mt.$.url;
   if (item.enclosure?.url && (item.enclosure.type ?? "").startsWith("image")) return item.enclosure.url;
@@ -79,7 +81,8 @@ export async function parseFeed(xml: string): Promise<FetchedFeed> {
     const url = (link || (/^https?:/.test(guid) ? guid : "")).trim();
     const title = stripHtml(raw.title ?? "");
     if (!url || !/^https?:\/\//.test(url) || !title) continue;
-    const rawSummary = asText(raw.contentSnippet) || asText(raw.description) || asText(raw.summary) || asText(raw.content);
+    const mgDesc = (raw.mediaGroup as { "media:description"?: unknown[] } | undefined)?.["media:description"]?.[0];
+    const rawSummary = asText(raw.contentSnippet) || asText(raw.description) || asText(raw.summary) || asText(raw.content) || asText(mgDesc);
     const summary = stripHtml(rawSummary);
     items.push({
       url,

@@ -9,6 +9,8 @@ export default function InspirationPage() {
   const items = listInspirations(db);
   const st = db.prepare("SELECT id, headline FROM clusters WHERE id = ?");
   return (
+    <>
+    <h1 className="mb-4 font-serif text-[26px] font-semibold tracking-tight">Inspiration</h1>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <section className="min-w-0">
         {items.length === 0 ? (
@@ -34,5 +36,6 @@ export default function InspirationPage() {
         </p>
       </aside>
     </div>
+    </>
   );
 }

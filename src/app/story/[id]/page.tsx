@@ -17,6 +17,7 @@ import { TrackVisit } from "@/components/CommandPalette";
 import { OriginBadge } from "@/components/research/Badges";
 import { MergeStory } from "@/components/MergeStory";
 import { StoryShell } from "@/components/StoryShell";
+import { MediaPanel } from "@/components/MediaPanel";
 import { fmtDate, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -129,6 +130,11 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
                 </li>
               ))}
             </ol>
+          </div>
+
+          <div>
+            <div className="eyebrow mb-1.5">Visuals & media</div>
+            <MediaPanel initialQuery={story.entities.slice(0, 2).join(" ") || story.headline.split(" ").slice(0, 6).join(" ")} compact />
           </div>
 
           {story.entities.length > 0 && (

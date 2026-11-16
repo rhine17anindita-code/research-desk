@@ -4,6 +4,7 @@ import { newId, nowIso } from "../ids";
 import { indexItem, unindexItem } from "../repo/search-index";
 import { uniqueTokens } from "../text";
 import { FORMAT_BY_ID } from "./formats";
+import { activeChannelId } from "../channels";
 
 // ---------------------------------------------------------------------------
 // Ideas
@@ -37,14 +38,41 @@ export interface Idea {
   batchId: string | null;
   projectId: string | null;
   inspirationId: string | null;
+  packaging: IdeaPackaging | null;
+  expansion: IdeaExpansion | null;
+  proposal: string | null;
+  pitch: string | null;
+  sourceKind: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface IdeaPackaging {
+  titles: string[];
+  thumbnail: string;
+  firstSeconds: string;
+  scores: { hook: number; massAppeal: number; novelty: number; evidence: number };
+  whoShares?: string;
+}
+
+export interface IdeaExpansion {
+  logline: string;
+  angles: { title: string; angle: string; hook: string }[];
+  outline: { heading: string; beats: string[] }[];
+  nextSteps: string[];
+  toLookAt: { what: string; why: string; where: string }[];
+  people: string[];
+  risks: string[];
+  relatedStories: string[];
+  model: string;
+  generatedAt: string;
 }
 
 interface IdeaRow {
   id: string; title: string; hook: string | null; angle: string | null; why_untold: string | null; why_it_lands: string | null; format: string;
   medium: Idea["medium"]; angle_type: string | null; backing: string; open_questions: string; effort: string | null; timeliness: string | null;
   status: IdeaStatus; reason: string | null; origin: Idea["origin"]; batch_id: string | null; project_id: string | null; inspiration_id: string | null;
+  packaging: string | null; expansion: string | null; proposal: string | null; pitch: string | null; source_kind: string | null;
   created_at: string; updated_at: string;
 }
 
@@ -52,10 +80,23 @@ const mapIdea = (r: IdeaRow): Idea => ({
   id: r.id, title: r.title, hook: r.hook, angle: r.angle, whyUntold: r.why_untold, whyItLands: r.why_it_lands, format: r.format, medium: r.medium,
   angleType: r.angle_type, backing: parseJson(r.backing, { clusters: [], sources: [], questions: [] }), openQuestions: parseJson(r.open_questions, []),
   effort: r.effort, timeliness: r.timeliness, status: r.status, reason: r.reason, origin: r.origin, batchId: r.batch_id, projectId: r.project_id,
-  inspirationId: r.inspiration_id, createdAt: r.created_at, updatedAt: r.updated_at,
+  inspirationId: r.inspiration_id, packaging: parseJson(r.packaging, null), expansion: parseJson(r.expansion, null), proposal: r.proposal, pitch: r.pitch,
+  sourceKind: r.source_kind, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
-export type IdeaInput = Omit<Idea, "id" | "status" | "reason" | "projectId" | "createdAt" | "updatedAt" | "medium"> & { medium?: Idea["medium"] };
+export type IdeaInput = Omit<Idea, "id" | "status" | "reason" | "projectId" | "createdAt" | "updatedAt" | "medium" | "packaging" | "expansion" | "proposal" | "pitch" | "sourceKind"> & {
+  medium?: Idea["medium"];
+  packaging?: IdeaPackaging | null;
+  pitch?: string | null;
+  sourceKind?: string | null;
+};
+
+export function setIdeaExtras(db: DB, id: string, extras: { expansion?: IdeaExpansion; proposal?: string; packaging?: IdeaPackaging }): Idea | null {
+  if (extras.expansion) db.prepare("UPDATE ideas SET expansion = ?, updated_at = ? WHERE id = ?").run(JSON.stringify(extras.expansion), nowIso(), id);
+  if (extras.proposal !== undefined) db.prepare("UPDATE ideas SET proposal = ?, updated_at = ? WHERE id = ?").run(extras.proposal, nowIso(), id);
+  if (extras.packaging) db.prepare("UPDATE ideas SET packaging = ?, updated_at = ? WHERE id = ?").run(JSON.stringify(extras.packaging), nowIso(), id);
+  return getIdea(db, id);
+}
 
 export function createIdea(db: DB, i: IdeaInput): Idea {
   const id = newId("idea");
@@ -63,11 +104,12 @@ export function createIdea(db: DB, i: IdeaInput): Idea {
   const medium = i.medium ?? FORMAT_BY_ID[i.format]?.medium ?? "visual";
   db.prepare(
     `INSERT INTO ideas (id, title, hook, angle, why_untold, why_it_lands, format, medium, angle_type, backing, open_questions, effort, timeliness,
-      status, origin, batch_id, inspiration_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?)`,
+      status, origin, batch_id, inspiration_id, channel_id, packaging, source_kind, pitch, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id, i.title.trim(), i.hook, i.angle, i.whyUntold, i.whyItLands, i.format, medium, i.angleType, JSON.stringify(i.backing), JSON.stringify(i.openQuestions),
-    i.effort, i.timeliness, i.origin, i.batchId, i.inspirationId, now, now,
+    i.effort, i.timeliness, i.origin, i.batchId, i.inspirationId, activeChannelId(db), i.packaging ? JSON.stringify(i.packaging) : null, i.sourceKind ?? null,
+    i.pitch ?? null, now, now,
   );
   indexItem(db, "idea", id, i.title, [i.hook, i.angle, i.whyUntold, i.whyItLands, ...i.openQuestions].filter(Boolean).join(" "));
   return getIdea(db, id)!;
@@ -78,9 +120,11 @@ export function getIdea(db: DB, id: string): Idea | null {
   return r ? mapIdea(r) : null;
 }
 
-export function listIdeas(db: DB, opts: { status?: IdeaStatus | IdeaStatus[]; format?: string; medium?: string; limit?: number } = {}): Idea[] {
-  const where: string[] = [];
-  const params: unknown[] = [];
+export function listIdeas(db: DB, opts: { status?: IdeaStatus | IdeaStatus[]; format?: string; medium?: string; limit?: number; inspirationId?: string; origin?: string } = {}): Idea[] {
+  const where: string[] = ["channel_id = ?"];
+  const params: unknown[] = [activeChannelId(db)];
+  if (opts.inspirationId) { where.push("inspiration_id = ?"); params.push(opts.inspirationId); }
+  if (opts.origin) { where.push("origin = ?"); params.push(opts.origin); }
   if (opts.status) {
     const st = Array.isArray(opts.status) ? opts.status : [opts.status];
     where.push(`status IN (${st.map(() => "?").join(",")})`);
@@ -88,7 +132,7 @@ export function listIdeas(db: DB, opts: { status?: IdeaStatus | IdeaStatus[]; fo
   }
   if (opts.format) { where.push("format = ?"); params.push(opts.format); }
   if (opts.medium) { where.push("medium = ?"); params.push(opts.medium); }
-  return (db.prepare(`SELECT * FROM ideas ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY created_at DESC LIMIT ?`).all(...params, opts.limit ?? 200) as IdeaRow[]).map(mapIdea);
+  return (db.prepare(`SELECT * FROM ideas WHERE ${where.join(" AND ")} ORDER BY created_at DESC LIMIT ?`).all(...params, opts.limit ?? 200) as IdeaRow[]).map(mapIdea);
 }
 
 export function updateIdea(db: DB, id: string, patch: Partial<Pick<Idea, "status" | "reason" | "projectId" | "title" | "hook" | "angle" | "format">>): Idea | null {
@@ -108,7 +152,7 @@ export function deleteIdea(db: DB, id: string): void {
 
 export function ideaCounts(db: DB): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const r of db.prepare("SELECT status, COUNT(*) AS n FROM ideas GROUP BY status").all() as { status: string; n: number }[]) out[r.status] = r.n;
+  for (const r of db.prepare("SELECT status, COUNT(*) AS n FROM ideas WHERE channel_id = ? GROUP BY status").all(activeChannelId(db)) as { status: string; n: number }[]) out[r.status] = r.n;
   return out;
 }
 
@@ -158,9 +202,9 @@ export function createInspiration(db: DB, i: Omit<Inspiration, "id" | "analysis"
   const id = newId("insp");
   const now = nowIso();
   db.prepare(
-    `INSERT INTO inspirations (id, url, kind, title, author, description, thumbnail, note, intents, matched_clusters, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, i.url, i.kind, i.title, i.author, i.description, i.thumbnail, i.note, JSON.stringify(i.intents), JSON.stringify(i.matchedClusters), now, now);
+    `INSERT INTO inspirations (id, url, kind, title, author, description, thumbnail, note, intents, matched_clusters, channel_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, i.url, i.kind, i.title, i.author, i.description, i.thumbnail, i.note, JSON.stringify(i.intents), JSON.stringify(i.matchedClusters), activeChannelId(db), now, now);
   indexItem(db, "inspiration", id, i.title ?? i.url ?? "Inspiration", [i.description, i.note, i.author].filter(Boolean).join(" "));
   recordTaste(db, { kind: "inspiration", objectType: "inspiration", objectId: id, tags: tagsOf(`${i.title ?? ""} ${i.description ?? ""} ${i.note ?? ""}`), reason: i.intents.join(",") });
   return getInspiration(db, id)!;
@@ -172,7 +216,7 @@ export function getInspiration(db: DB, id: string): Inspiration | null {
 }
 
 export function listInspirations(db: DB, limit = 200): Inspiration[] {
-  return (db.prepare("SELECT * FROM inspirations ORDER BY created_at DESC LIMIT ?").all(limit) as InspirationRow[]).map(mapInspiration);
+  return (db.prepare("SELECT * FROM inspirations WHERE channel_id = ? ORDER BY created_at DESC LIMIT ?").all(activeChannelId(db), limit) as InspirationRow[]).map(mapInspiration);
 }
 
 export function updateInspiration(db: DB, id: string, patch: Partial<Pick<Inspiration, "note" | "intents" | "analysis" | "title">>): Inspiration | null {
@@ -204,8 +248,8 @@ export function recordTaste(
   e: { kind: string; objectType?: string; objectId?: string; format?: string | null; angleType?: string | null; tags?: string[]; reason?: string | null },
 ): void {
   db.prepare(
-    "INSERT INTO taste_events (id, kind, object_type, object_id, format, angle_type, tags, reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run(newId("tst"), e.kind, e.objectType ?? null, e.objectId ?? null, e.format ?? null, e.angleType ?? null, JSON.stringify(e.tags ?? []), e.reason ?? null, nowIso());
+    "INSERT INTO taste_events (id, kind, object_type, object_id, format, angle_type, tags, reason, channel_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(newId("tst"), e.kind, e.objectType ?? null, e.objectId ?? null, e.format ?? null, e.angleType ?? null, JSON.stringify(e.tags ?? []), e.reason ?? null, activeChannelId(db), nowIso());
 }
 
 export interface TasteStats {
@@ -223,7 +267,7 @@ const NEGATIVE = new Set(["idea-skip", "story-dislike"]);
 
 /** Local, transparent aggregation of what the user's behaviour shows. No AI. */
 export function tasteStats(db: DB, sinceIso?: string): TasteStats {
-  const rows = db.prepare("SELECT kind, format, angle_type, tags, reason, created_at FROM taste_events ORDER BY created_at DESC LIMIT 2000").all() as {
+  const rows = db.prepare("SELECT kind, format, angle_type, tags, reason, created_at FROM taste_events WHERE channel_id = ? ORDER BY created_at DESC LIMIT 2000").all(activeChannelId(db)) as {
     kind: string; format: string | null; angle_type: string | null; tags: string; reason: string | null; created_at: string;
   }[];
   const tally = (key: "format" | "angle_type") => {

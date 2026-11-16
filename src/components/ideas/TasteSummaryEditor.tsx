@@ -5,7 +5,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { AiButton } from "../AiButton";
 
-export function TasteSummaryEditor({ initial, eventsSince }: { initial: string; eventsSince: number }) {
+export function TasteSummaryEditor({ initial, eventsSince, channelId }: { initial: string; eventsSince: number; channelId: string }) {
   const router = useRouter();
   const [text, setText] = useState(initial);
   const [saved, setSaved] = useState(false);
@@ -22,7 +22,7 @@ export function TasteSummaryEditor({ initial, eventsSince }: { initial: string; 
           className="btn"
           disabled={text === initial}
           onClick={async () => {
-            await api("/api/settings", "PATCH", { "taste.summary": text });
+            await api(`/api/channels/${channelId}`, "PATCH", { tasteSummary: text });
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
             router.refresh();

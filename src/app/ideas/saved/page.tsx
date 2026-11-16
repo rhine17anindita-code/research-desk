@@ -22,6 +22,8 @@ export default async function SavedIdeasPage({ searchParams }: { searchParams: P
   const skipped = listIdeas(db, { status: ["skipped", "dropped"], limit: 30 });
 
   return (
+    <>
+    <h1 className="mb-4 font-serif text-[26px] font-semibold tracking-tight">Saved ideas</h1>
     <div className="space-y-6">
       <form className="flex flex-wrap gap-2" action="/ideas/saved">
         <select name="medium" defaultValue={sp.medium ?? ""} className="input !w-auto">
@@ -80,5 +82,6 @@ export default async function SavedIdeasPage({ searchParams }: { searchParams: P
         </div>
       </div>
     </div>
+    </>
   );
 }

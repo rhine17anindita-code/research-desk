@@ -5,6 +5,8 @@ import { getAiStatus } from "@/lib/ai/service";
 import { usageSummary } from "@/lib/repo/usage";
 import { MODEL_PRICING } from "@/lib/ai/pricing";
 import { AiSettings, FeedsSettings, PersonalisationSettings, PipelineSettings } from "@/components/SettingsClient";
+import { ChannelsSettings } from "@/components/ChannelsSettings";
+import { activeChannel, activeChannelId, listChannels } from "@/lib/channels";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const db = getDb();
   const settings = getAllSettings(db);
   const tabs = [
+    ["channels", "Channels"],
     ["sources", "Sources"],
     ["personalisation", "Personalisation"],
     ["ai", "AI & usage"],
@@ -47,7 +50,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           regionWeights={settings["discover.region_weights"]}
           windowHours={settings["discover.window_hours"]}
           topTerms={db.prepare("SELECT term, weight FROM term_weights ORDER BY ABS(weight) DESC LIMIT 24").all() as never}
-          profile={settings["profile.about"]}
+          profile={activeChannel(db).profile}
+          channelId={activeChannel(db).id}
+          channelName={activeChannel(db).name}
         />
       )}
       {tab === "ai" && (
@@ -56,6 +61,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           status={getAiStatus(db)}
           models={Object.entries(MODEL_PRICING).map(([id, p]) => ({ id, label: p.label, input: p.input, output: p.output }))}
           usage={usageSummary(db)}
+        />
+      )}
+      {tab === "channels" && (
+        <ChannelsSettings
+          channels={listChannels(db)}
+          active={activeChannelId(db)}
+          feeds={db.prepare("SELECT id, name, category, region, enabled FROM feeds ORDER BY category, name").all() as never}
+          membership={(db.prepare("SELECT channel_id, feed_id FROM channel_feeds").all() as { channel_id: string; feed_id: string }[]).reduce<Record<string, string[]>>((m, r) => ((m[r.channel_id] ??= []).push(r.feed_id), m), {})}
         />
       )}
       {tab === "pipeline" && <PipelineSettings stages={settings["pipeline.stages"]} dbPath={resolveDbPath()} />}

@@ -7,7 +7,7 @@ import { Icon } from "./Icon";
 import { RefreshButton } from "./FeedActions";
 import type { AppSettings, PipelineStage } from "@/lib/settings-defaults";
 import type { AiStatus } from "@/lib/ai/service";
-import { fmtDate, timeAgo, usd } from "@/lib/format";
+import { fmtDate, pctOf, timeAgo } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Sources
@@ -210,12 +210,12 @@ function TopicWatch() {
 interface SignalRow { id: string; label: string; description: string; cues: string[]; weight: number; learned: number; enabled: number; builtin: number }
 interface RuleRow { id: string; name: string; action: string; field: string; pattern: string; weight: number; enabled: number }
 
-function ProfileEditor({ initial }: { initial: string }) {
+function ProfileEditor({ initial, channelId, channelName }: { initial: string; channelId: string; channelName: string }) {
   const [text, setText] = useState(initial);
   const [saved, setSaved] = useState<string | null>(null);
   return (
     <section className="card p-4">
-      <h2 className="font-serif text-[19px] font-semibold">Your research profile</h2>
+      <h2 className="font-serif text-[19px] font-semibold">Profile — {channelName}</h2>
       <p className="mb-2 text-[13px] text-muted">
         Tell the AI who you are and what you make. It is included with question generation, answers and the assistant so suggestions fit your audience and format. Used only when you run an AI action.
       </p>
@@ -229,7 +229,7 @@ function ProfileEditor({ initial }: { initial: string }) {
         <button
           className="btn-primary"
           onClick={async () => {
-            await api("/api/settings", "PATCH", { "profile.about": text });
+            await api(`/api/channels/${channelId}`, "PATCH", { profile: text });
             setSaved("Saved — new AI results will use it.");
             setTimeout(() => setSaved(null), 3000);
           }}
@@ -242,7 +242,7 @@ function ProfileEditor({ initial }: { initial: string }) {
   );
 }
 
-export function PersonalisationSettings({ signals, rules, regions, regionWeights, windowHours, topTerms, profile }: { signals: SignalRow[]; rules: RuleRow[]; regions: string[]; regionWeights: Record<string, number>; windowHours: number; topTerms: { term: string; weight: number }[]; profile: string }) {
+export function PersonalisationSettings({ signals, rules, regions, regionWeights, windowHours, topTerms, profile, channelId, channelName }: { signals: SignalRow[]; rules: RuleRow[]; regions: string[]; regionWeights: Record<string, number>; windowHours: number; topTerms: { term: string; weight: number }[]; profile: string; channelId: string; channelName: string }) {
   const router = useRouter();
   const [newSig, setNewSig] = useState({ label: "", description: "", cues: "" });
   const [rule, setRule] = useState({ action: "boost", field: "any", pattern: "", weight: 3 });
@@ -257,7 +257,7 @@ export function PersonalisationSettings({ signals, rules, regions, regionWeights
 
   return (
     <div className="space-y-8">
-      <ProfileEditor initial={profile} />
+      <ProfileEditor key={channelId} initial={profile} channelId={channelId} channelName={channelName} />
       <section>
         <h2 className="font-serif text-[19px] font-semibold">Editorial signals</h2>
         <p className="mb-3 text-[13px] text-muted">
@@ -444,7 +444,7 @@ export function AiSettings({ settings, status, models, usage }: { settings: AppS
               <div>
                 <label className="label">Model for research tasks</label>
                 <select className="input" value={s["ai.model"]} onChange={(e) => { setS({ ...s, "ai.model": e.target.value }); void save({ "ai.model": e.target.value }); }}>
-                  {models.map((m) => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} per M tokens</option>)}
+                  {models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
                 </select>
               </div>
               <div>
@@ -482,9 +482,9 @@ export function AiSettings({ settings, status, models, usage }: { settings: AppS
           <h2 className="font-serif text-[19px] font-semibold">Budgets</h2>
           <p className="text-[12.5px] text-muted">Checked before every call against a worst-case estimate. Calls that would exceed a limit are refused and logged.</p>
           {([
-            ["budget.daily_usd", "Daily limit (USD)"],
-            ["budget.monthly_usd", "Monthly limit (USD)"],
-            ["budget.per_task_usd", "Per-task limit (USD)"],
+            ["budget.daily_usd", "Daily budget (US$) — percentages elsewhere are shares of this"],
+            ["budget.monthly_usd", "Monthly budget (US$)"],
+            ["budget.per_task_usd", "Most a single action may use (US$)"],
           ] as const).map(([k, label]) => (
             <div key={k}>
               <label className="label">{label}</label>
@@ -492,7 +492,7 @@ export function AiSettings({ settings, status, models, usage }: { settings: AppS
             </div>
           ))}
           <div className="rounded-md bg-surface-2 px-3 py-2 text-[12.5px] text-ink-2">
-            Spent today: <b>{usd(status.spentToday)}</b> of {usd(status.dailyLimit)} · this month: <b>{usd(status.spentMonth)}</b> of {usd(status.monthlyLimit)}
+            Used today: <b>{pctOf(status.spentToday, status.dailyLimit)}</b> of the daily budget · this month: <b>{pctOf(status.spentMonth, status.monthlyLimit)}</b> of the monthly budget
           </div>
           {msg && <p className="text-[12px] text-ok">{msg}</p>}
           {err && <p className="text-[12px] text-bad">{err}</p>}
@@ -504,19 +504,19 @@ export function AiSettings({ settings, status, models, usage }: { settings: AppS
         <p className="mb-3 text-[12.5px] text-muted">Estimated from token counts and list prices; your provider&apos;s invoice is authoritative. {usage.cacheEntries} cached AI results are reused instead of regenerated.</p>
         <div className="grid gap-4 lg:grid-cols-2">
           <table className="w-full text-[12.5px]">
-            <thead><tr className="text-left text-muted"><th className="py-1">Task</th><th className="text-right">Calls</th><th className="text-right">Cached</th><th className="text-right">Tokens in/out</th><th className="text-right">Est. cost</th></tr></thead>
+            <thead><tr className="text-left text-muted"><th className="py-1">Task</th><th className="text-right">Calls</th><th className="text-right">Cached</th><th className="text-right">Tokens in/out</th><th className="text-right">% of month</th></tr></thead>
             <tbody>
               {usage.byTask.map((t) => (
-                <tr key={t.task} className="border-t border-line"><td className="py-1">{t.task}</td><td className="text-right tabular-nums">{t.requests}</td><td className="text-right tabular-nums">{t.cached}</td><td className="text-right tabular-nums">{t.input_tokens.toLocaleString()} / {t.output_tokens.toLocaleString()}</td><td className="text-right tabular-nums">{usd(t.cost)}</td></tr>
+                <tr key={t.task} className="border-t border-line"><td className="py-1">{t.task}</td><td className="text-right tabular-nums">{t.requests}</td><td className="text-right tabular-nums">{t.cached}</td><td className="text-right tabular-nums">{t.input_tokens.toLocaleString()} / {t.output_tokens.toLocaleString()}</td><td className="text-right tabular-nums">{pctOf(t.cost, status.monthlyLimit)}</td></tr>
               ))}
               {usage.byTask.length === 0 && <tr><td colSpan={5} className="py-2 text-muted">No AI calls yet.</td></tr>}
             </tbody>
           </table>
           <table className="w-full text-[12.5px]">
-            <thead><tr className="text-left text-muted"><th className="py-1">Day</th><th className="text-right">Calls</th><th className="text-right">Cached</th><th className="text-right">Est. cost</th></tr></thead>
+            <thead><tr className="text-left text-muted"><th className="py-1">Day</th><th className="text-right">Calls</th><th className="text-right">Cached</th><th className="text-right">% of day</th></tr></thead>
             <tbody>
               {usage.byDay.map((d) => (
-                <tr key={d.day} className="border-t border-line"><td className="py-1">{d.day}</td><td className="text-right tabular-nums">{d.requests}</td><td className="text-right tabular-nums">{d.cached}</td><td className="text-right tabular-nums">{usd(d.cost)}</td></tr>
+                <tr key={d.day} className="border-t border-line"><td className="py-1">{d.day}</td><td className="text-right tabular-nums">{d.requests}</td><td className="text-right tabular-nums">{d.cached}</td><td className="text-right tabular-nums">{pctOf(d.cost, status.dailyLimit)}</td></tr>
               ))}
             </tbody>
           </table>
@@ -533,7 +533,7 @@ export function AiSettings({ settings, status, models, usage }: { settings: AppS
                     <td className="pr-2 text-muted">{r.model}</td>
                     <td className={`pr-2 ${r.status === "ok" ? "text-ok" : r.status === "cached" ? "text-muted" : "text-bad"}`}>{r.status}</td>
                     <td className="pr-2 text-right tabular-nums">{r.input_tokens}/{r.output_tokens}</td>
-                    <td className="pr-2 text-right tabular-nums">{usd(r.cost_usd)}</td>
+                    <td className="pr-2 text-right tabular-nums">{pctOf(r.cost_usd, status.dailyLimit)}</td>
                     <td className="max-w-[260px] truncate text-muted" title={r.error ?? ""}>{r.error}</td>
                   </tr>
                 ))}

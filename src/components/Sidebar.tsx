@@ -5,20 +5,21 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { openPalette } from "./CommandPalette";
 import { ThemeToggle } from "./ThemeToggle";
+import { pctOf } from "@/lib/format";
+import { ChannelSwitcher } from "./ChannelSwitcher";
 import { onRecentChange, readRecent, type RecentItem } from "./recent";
 import { Icon } from "./Icon";
 
 const NAV = [
+  { href: "/studio", label: "Studio", icon: "bulb" },
   { href: "/discover", label: "Discover", icon: "discover" },
-  { href: "/ideas", label: "Ideas", icon: "bulb" },
-  { href: "/explore", label: "Explore", icon: "explore" },
   { href: "/research", label: "Research", icon: "research" },
   { href: "/library", label: "Library", icon: "library" },
   { href: "/search", label: "Search", icon: "search" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
-export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number }; canSignOut?: boolean }) {
+export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number }; canSignOut?: boolean; channels: { list: { id: string; name: string }[]; active: string } }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<RecentItem[]>([]);
@@ -64,7 +65,7 @@ export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: 
       </div>
     ) : null;
   const active = (href: string) =>
-    path === href || path.startsWith(href + "/") || (href === "/explore" && (path.startsWith("/story") || path.startsWith("/question")));
+    path === href || path.startsWith(href + "/") || (href === "/studio" && path.startsWith("/ideas")) || (href === "/research" && (path.startsWith("/story") || path.startsWith("/question") || path.startsWith("/explore")));
 
   const nav = (
     <nav className="flex flex-col gap-0.5">
@@ -103,7 +104,16 @@ export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: 
         {ai.available ? "AI available" : "AI unavailable"}
       </div>
       <div className="mt-0.5 leading-snug text-muted">
-        {ai.available ? `${ai.model.replace("claude-", "")} · $${ai.spentToday.toFixed(2)} of $${ai.dailyLimit.toFixed(2)} today` : ai.reason}
+        {ai.available ? (
+          <>
+            <span>{pctOf(ai.spentToday, ai.dailyLimit)} of today&apos;s budget used</span>
+            <span className="mt-1 block h-1 overflow-hidden rounded-full bg-surface-2">
+              <span className="block h-full rounded-full bg-ok/70" style={{ width: `${Math.min(100, (ai.spentToday / Math.max(ai.dailyLimit, 0.0001)) * 100)}%` }} />
+            </span>
+          </>
+        ) : (
+          ai.reason
+        )}
       </div>
     </Link>
   );
@@ -111,7 +121,7 @@ export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: 
   return (
     <>
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur md:hidden print:hidden">
-        <Link href="/discover" className="font-serif text-[17px] font-semibold tracking-tight">
+        <Link href="/studio" className="font-serif text-[17px] font-semibold tracking-tight">
           Research Desk
         </Link>
         <button className="btn-ghost" onClick={() => setOpen((o) => !o)} aria-label="Menu" aria-expanded={open}>
@@ -120,6 +130,7 @@ export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: 
       </div>
       {open && (
         <div className="fixed inset-x-0 top-[49px] z-30 border-b border-line bg-paper p-3 shadow-lg md:hidden">
+          <ChannelSwitcher channels={channels.list} active={channels.active} />
           {quick}
           {nav}
           {recentList}
@@ -128,10 +139,11 @@ export function Sidebar({ ai, canSignOut }: { ai: { available: boolean; reason: 
       )}
       <aside className="sticky top-0 hidden h-screen w-[208px] shrink-0 flex-col justify-between overflow-y-auto border-r border-line px-3 py-4 md:flex">
         <div>
-          <Link href="/discover" className="mb-5 block px-2.5">
+          <Link href="/studio" className="mb-5 block px-2.5">
             <div className="font-serif text-[18px] font-semibold leading-tight tracking-tight">Research Desk</div>
-            <div className="text-[11.5px] text-muted">News → questions → evidence</div>
+            <div className="text-[11.5px] text-muted">Find it · shape it · prove it</div>
           </Link>
+          <ChannelSwitcher channels={channels.list} active={channels.active} />
           {quick}
           {nav}
           {recentList}

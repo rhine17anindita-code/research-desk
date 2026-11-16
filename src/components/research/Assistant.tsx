@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { Icon } from "../Icon";
-import { usd } from "@/lib/format";
+import { pctOf } from "@/lib/format";
 import type { ChatMessage, Source } from "@/lib/types";
 
 /** Render assistant text: paragraphs, bullets, and [[src:id]] citation markers as numbered chips. */
@@ -79,8 +79,11 @@ export function Assistant({ contextType, contextId, clusterId, projectId }: { co
     setBusy(true);
     setErr(null);
     try {
-      const est = await api<{ estimate: { usd: number; model: string } }>("/api/assistant", "POST", { contextType, contextId, message: text, retrieve, estimateOnly: true });
-      if (est.estimate.usd > 0.05 && !confirm(`This reply could cost up to ${usd(est.estimate.usd)} (${est.estimate.model}). Continue?`)) {
+      const [est, st] = await Promise.all([
+        api<{ estimate: { usd: number; model: string } }>("/api/assistant", "POST", { contextType, contextId, message: text, retrieve, estimateOnly: true }),
+        api<{ status: { dailyLimit: number } }>("/api/ai/status"),
+      ]);
+      if (est.estimate.usd > st.status.dailyLimit * 0.03 && !confirm(`This reply could use up to ${pctOf(est.estimate.usd, st.status.dailyLimit)} of today's AI budget. Continue?`)) {
         setBusy(false);
         return;
       }

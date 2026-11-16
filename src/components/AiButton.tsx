@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "./api";
 import { Icon } from "./Icon";
-import { usd } from "@/lib/format";
+import { modelName, pctOf } from "@/lib/format";
 
 type Phase = "idle" | "checking" | "confirm" | "running";
 
@@ -28,6 +28,7 @@ interface Props {
 export function AiButton({ label, endpoint, payload = {}, confirm = "auto", onResult, variant = "ai", title, runningLabel, size = "md" }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [estimate, setEstimate] = useState<{ usd: number; model: string } | null>(null);
+  const [daily, setDaily] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -37,7 +38,7 @@ export function AiButton({ label, endpoint, payload = {}, confirm = "auto", onRe
     try {
       const res = await api<Record<string, unknown>>(endpoint, "POST", payload);
       const cost = typeof res.costUsd === "number" ? res.costUsd : 0;
-      setNote(res.cached ? "Reused a saved result — no cost." : cost ? `Done · ${usd(cost)}` : "Done");
+      setNote(res.cached ? "Reused a saved result — free." : cost ? `Done · used ${pctOf(cost, daily)} of today's AI budget` : "Done");
       setTimeout(() => setNote(null), 5000);
       onResult(res);
     } catch (e) {
@@ -53,7 +54,7 @@ export function AiButton({ label, endpoint, payload = {}, confirm = "auto", onRe
     setPhase("checking");
     try {
       const [{ status }, est] = await Promise.all([
-        api<{ status: { available: boolean; unavailableReason: string | null } }>("/api/ai/status"),
+        api<{ status: { available: boolean; unavailableReason: string | null; dailyLimit: number } }>("/api/ai/status"),
         api<{ estimate: { usd: number; model: string } }>(endpoint, "POST", { ...payload, estimateOnly: true }),
       ]);
       if (!status.available) {
@@ -62,7 +63,8 @@ export function AiButton({ label, endpoint, payload = {}, confirm = "auto", onRe
         return;
       }
       setEstimate(est.estimate);
-      if (confirm === "auto" && est.estimate.usd < 0.02) {
+      setDaily(status.dailyLimit);
+      if (confirm === "auto" && est.estimate.usd < status.dailyLimit * 0.01) {
         await run();
         return;
       }
@@ -81,8 +83,8 @@ export function AiButton({ label, endpoint, payload = {}, confirm = "auto", onRe
       {phase === "confirm" && estimate ? (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-ai/30 bg-ai-soft px-2.5 py-1.5 text-[12.5px] text-ink-2">
           <span>
-            Uses <b className="font-medium">{estimate.model.replace("claude-", "")}</b> · up to ~{usd(estimate.usd)}
-            <span className="text-muted"> (usually less)</span>
+            Uses up to <b className="font-medium">{pctOf(estimate.usd, daily)}</b> of today&apos;s AI budget
+            <span className="text-muted"> (usually less · {modelName(estimate.model)})</span>
           </span>
           <button className="btn-primary !py-1" onClick={run}>
             Run

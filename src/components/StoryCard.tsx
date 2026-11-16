@@ -61,6 +61,12 @@ export function StoryCard({ story, signalLabels, rank }: { story: RankedCluster;
     <article className="card group px-4 py-3.5 transition-shadow hover:shadow-[0_1px_0_0_var(--line-strong)] sm:px-5">
       <div className="flex items-start gap-3">
         {rank !== undefined && <div className="mt-0.5 hidden w-5 shrink-0 text-right font-serif text-[15px] text-muted sm:block">{rank}</div>}
+        {story.image && (
+          <Link href={`/story/${story.id}`} className="order-last hidden shrink-0 sm:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={story.image} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-[84px] w-[128px] rounded-md bg-surface-2 object-cover" />
+          </Link>
+        )}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-muted">
             {story.isSample && <span className="rounded bg-warn-soft px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-warn">Sample · fictional</span>}

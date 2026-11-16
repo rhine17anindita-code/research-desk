@@ -7,9 +7,12 @@ import { createInspiration, getIdea, listIdeas, recordTaste, tagsOf, tasteStats,
 import { personalContext } from "@/lib/ideation/personal";
 import { listQuestions } from "@/lib/repo/questions";
 import { projectItemIds } from "@/lib/repo/projects";
-import { setSetting } from "@/lib/repo/settings";
+import { updateChannel } from "@/lib/channels";
 import { isEstimate } from "@/lib/research/ai-tasks";
 import { addFixtureFeeds, fixtureFetcher, freshDb, MockProvider, useMock } from "./helpers";
+import { setPulseForTesting } from "@/lib/ideation/pulse";
+
+const pkg = { alt_titles: ["Alt one", "Alt two"], thumbnail: "A dry riverbed, text: WHERE'S THE WATER?", first_seconds: "This river deal has no water in it.", who_shares: "Farmers' kids abroad", source_kind: "news", pulse: [] as string[], scores: { hook: 9, mass_appeal: 8, novelty: 8, evidence: 7 } };
 import type { DB } from "@/lib/db";
 
 describe("ideation", () => {
@@ -22,23 +25,34 @@ describe("ideation", () => {
     await ingestFeeds(db, { fetcher: fixtureFetcher });
     db.prepare("UPDATE clusters SET last_updated_at = ?").run(new Date().toISOString());
     db.prepare("UPDATE feeds SET category = 'regional'").run();
+    db.prepare("UPDATE feeds SET category = 'international' WHERE id = 'feed_c'").run(); // the channel follows international outlets too
     provider = new MockProvider({
       ideas: (req) => {
         const prompt = req.user;
         expect(prompt).toContain("STORIES");
         return {
           ideas: [
-            { title: "The river deal nobody has read", hook: "Two governments signed a water deal without saying how much water.", angle: "What the missing volumes mean for farmers.", why_untold: "Only regional outlets covered it.", why_it_lands: "Water is daily life.", format: "youtube-long", angle_type: "mechanism", stories: ["T1"], sources: ["S1", "S99"], open_questions: ["What volumes were proposed?"], effort: "medium", timeliness: "timely" },
-            { title: "Who won the Calder port contract?", hook: "A port concession went without a tender.", angle: "Follow the consortium's owners.", why_untold: "Little coverage.", why_it_lands: "Public money.", format: "short-video", angle_type: "follow-the-money", stories: ["T2", "T9"], sources: [], open_questions: [], effort: "low", timeliness: "timely" },
-            { title: "Not allowed", hook: "x", angle: "x", why_untold: "x", why_it_lands: "x", format: "op-ed", angle_type: "explainer", stories: [], sources: [], open_questions: [], effort: "low", timeliness: "evergreen" },
+            { ...pkg, title: "The river deal nobody has read", hook: "Two governments signed a water deal without saying how much water.", angle: "What the missing volumes mean for farmers.", why_untold: "Only regional outlets covered it.", why_it_lands: "Water is daily life.", format: "youtube-long", angle_type: "mechanism", stories: ["T1"], pulse: ["P2"], sources: ["S1", "S99"], open_questions: ["What volumes were proposed?"], effort: "medium", timeliness: "timely" },
+            { ...pkg, title: "Who won the Calder port contract?", hook: "A port concession went without a tender.", angle: "Follow the consortium's owners.", why_untold: "Little coverage.", why_it_lands: "Public money.", format: "short-video", angle_type: "follow-the-money", stories: ["T9"], sources: [], open_questions: [], effort: "low", timeliness: "timely" },
+            { ...pkg, scores: { hook: 4, mass_appeal: 5, novelty: 5, evidence: 9 }, title: "A worthy but dull explainer", hook: "x", angle: "x", why_untold: "x", why_it_lands: "x", format: "youtube-long", angle_type: "explainer", stories: [], sources: [], open_questions: [], effort: "low", timeliness: "evergreen" },
+            { ...pkg, title: "Not allowed", hook: "x", angle: "x", why_untold: "x", why_it_lands: "x", format: "op-ed", angle_type: "explainer", stories: [], sources: [], open_questions: [], effort: "low", timeliness: "evergreen" },
           ],
         };
       },
       summary: () => ({ summary: "You favour follow-the-money short videos about South Asian infrastructure." }),
     });
     useMock(provider);
+    setPulseForTesting({
+      geo: "BD", fetchedAt: new Date().toISOString(),
+      trends: [{ term: "Amber River", traffic: "5000+", news: ["Deal signed"] }],
+      mostRead: [{ title: "Amber River", views: 120000, extract: "A transboundary river.", url: "https://en.wikipedia.org/wiki/Amber_River" }],
+      onThisDay: [],
+    });
   });
-  afterEach(() => useMock(null));
+  afterEach(() => {
+    useMock(null);
+    setPulseForTesting(null);
+  });
 
   it("finds untold opportunities locally with reasons", () => {
     const opps = findOpportunities(db, { limit: 10 });
@@ -58,8 +72,12 @@ describe("ideation", () => {
     expect(ideas.map((i) => i.title).sort()).toEqual(["The river deal nobody has read", "Who won the Calder port contract?"]);
     const river = ideas.find((i) => i.title.startsWith("The river"))!;
     expect(river.backing.clusters).toHaveLength(1);
-    expect(river.backing.sources).toHaveLength(1); // S99 was invented and dropped
-    // Only one fixture story qualifies as untold, so T2/T9 do not exist and are dropped.
+    // S1 kept, S99 (invented) dropped, P2 (Wikipedia most-read) became a source.
+    expect(river.backing.sources).toHaveLength(2);
+    expect(river.packaging?.titles).toEqual(["Alt one", "Alt two"]);
+    expect(river.packaging?.scores.hook).toBe(9);
+    expect(river.sourceKind).toBe("news");
+    // T9 does not exist and is dropped; the low-scoring "dull" idea is filtered out.
     expect(ideas.find((i) => i.title.startsWith("Who won"))!.backing.clusters).toHaveLength(0);
     expect(river.medium).toBe("visual");
   });
@@ -87,7 +105,7 @@ describe("ideation", () => {
     createInspiration(db, { url: null, kind: "text", title: "Ports and power in South Asia", author: null, description: null, thumbnail: null, note: "love follow-the-money", intents: ["cover-topic"], matchedClusters: [] });
     recordTaste(db, { kind: "idea-save", format: "short-video", angleType: "follow-the-money", tags: ["port"] });
     recordTaste(db, { kind: "idea-save", format: "short-video", angleType: "follow-the-money", tags: ["port"] });
-    setSetting(db, "profile.about", "I make videos for a Bangladeshi audience.");
+    updateChannel(db, "ch_default", { profile: "I make videos for a Bangladeshi audience." });
     const r = await updateTasteSummary(db);
     expect(!isEstimate(r) && r.ok).toBe(true);
     const ctx = personalContext(db);

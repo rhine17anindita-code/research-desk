@@ -4,8 +4,10 @@ export interface FeedSeed {
   siteUrl?: string;
   region: string;
   language?: string;
-  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic";
+  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic" | "culture" | "video";
   enabled?: boolean;
+  /** Channels this feed belongs to by default (ids). Default: the news channel. */
+  channels?: string[];
 }
 
 /**
@@ -17,7 +19,7 @@ export interface FeedSeed {
  * Full article text is never scraped.
  */
 /** Bump when DEFAULT_FEEDS gains entries, so existing installations receive them once. */
-export const FEED_CATALOG_VERSION = 2;
+export const FEED_CATALOG_VERSION = 3;
 
 export function googleNewsTopicUrl(query: string): string {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -86,4 +88,20 @@ export const DEFAULT_FEEDS: FeedSeed[] = [
   { name: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index", siteUrl: "https://arstechnica.com", region: "Global", category: "industry" },
   { name: "MIT Technology Review", url: "https://www.technologyreview.com/feed/", siteUrl: "https://www.technologyreview.com", region: "Global", category: "industry" },
   { name: "Nature — News", url: "https://www.nature.com/nature.rss", siteUrl: "https://www.nature.com", region: "Global", category: "science" },
+  // Books, film, music & culture (channel: ch_culture)
+  { name: "The Guardian — Books", url: "https://www.theguardian.com/books/rss", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "The Guardian — Film", url: "https://www.theguardian.com/film/rss", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "The Guardian — Culture", url: "https://www.theguardian.com/culture/rss", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "Variety", url: "https://variety.com/feed/", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "The Hollywood Reporter", url: "https://www.hollywoodreporter.com/feed/", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "IndieWire", url: "https://www.indiewire.com/feed/", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "Literary Hub", url: "https://lithub.com/feed/", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "The New York Times — Books", url: "https://rss.nytimes.com/services/xml/rss/nyt/Books.xml", region: "North America", category: "culture", channels: ["ch_culture"] },
+  { name: "The New York Times — Movies", url: "https://rss.nytimes.com/services/xml/rss/nyt/Movies.xml", region: "North America", category: "culture", channels: ["ch_culture"] },
+  { name: "BBC — Entertainment & Arts", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "Pitchfork — News", url: "https://pitchfork.com/feed/feed-news/rss", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "Rolling Stone", url: "https://www.rollingstone.com/feed/", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "The Hindu — Entertainment", url: "https://www.thehindu.com/entertainment/feeder/default.rss", region: "South Asia", category: "culture", channels: ["ch_culture"] },
+  { name: "Publishers Weekly", url: "https://www.publishersweekly.com/pw/feeds/recent/index.xml", region: "Global", category: "culture", channels: ["ch_culture"] },
+  { name: "Topic: Bangladeshi film & books", url: googleNewsTopicUrl('Bangladesh (film OR cinema OR novel OR author OR book)'), siteUrl: "https://news.google.com", region: "South Asia", category: "topic", channels: ["ch_culture"] },
 ];

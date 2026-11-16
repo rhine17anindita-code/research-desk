@@ -3,7 +3,7 @@ import { parseJson } from "../db";
 import { loadPrefs } from "../ranking";
 import { detectSignals } from "../signals";
 import { uniqueTokens } from "../text";
-import { getSetting } from "../repo/settings";
+import { activeChannel, CHANNEL_CLUSTER_SQL } from "../channels";
 import { listInspirations, tasteStats } from "./repo";
 
 /**
@@ -38,7 +38,10 @@ export function findOpportunities(db: DB, opts: { days?: number; limit?: number;
   const enabledSignals = prefs.signals.filter((s) => s.enabled);
   const labels = Object.fromEntries(prefs.signals.map((s) => [s.id, s.label]));
 
-  const profileTerms = new Set(uniqueTokens(getSetting(db, "profile.about")));
+  const channel = activeChannel(db);
+  // "Missed by international outlets" only means something for channels that follow them.
+  const channelHasIntl = !!db.prepare("SELECT 1 FROM channel_feeds cf JOIN feeds f ON f.id = cf.feed_id WHERE cf.channel_id = ? AND f.category = 'international' LIMIT 1").get(channel.id);
+  const profileTerms = new Set(uniqueTokens(`${channel.profile} ${channel.description ?? ""}`));
   const inspirationTerms = new Set(
     listInspirations(db, 50).flatMap((i) => uniqueTokens(`${i.title ?? ""} ${i.note ?? ""} ${i.analysis?.topic ?? ""}`)),
   );
@@ -49,9 +52,9 @@ export function findOpportunities(db: DB, opts: { days?: number; limit?: number;
   const clusters = db
     .prepare(
       `SELECT c.id, c.headline, c.summary, c.source_count, c.last_updated_at, c.tokens, c.entities, c.rating
-       FROM clusters c WHERE c.last_updated_at >= ? AND c.state != 'dismissed' AND c.is_sample = 0 ORDER BY c.last_updated_at DESC LIMIT 2500`,
+       FROM clusters c WHERE c.last_updated_at >= ? AND c.state != 'dismissed' AND c.is_sample = 0 AND ${CHANNEL_CLUSTER_SQL} ORDER BY c.last_updated_at DESC LIMIT 2500`,
     )
-    .all(since) as { id: string; headline: string; summary: string | null; source_count: number; last_updated_at: string; tokens: string; entities: string; rating: number }[];
+    .all(since, channel.id) as { id: string; headline: string; summary: string | null; source_count: number; last_updated_at: string; tokens: string; entities: string; rating: number }[];
 
   const arts = db.prepare(
     `SELECT a.title, a.summary, a.publisher, COALESCE(f.category, 'topic') AS category FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.cluster_id = ?`,
@@ -60,7 +63,7 @@ export function findOpportunities(db: DB, opts: { days?: number; limit?: number;
     "SELECT id, text, answer_state FROM questions WHERE cluster_id = ? AND archived = 0 AND answer_state IN ('needs-investigation', 'contested', 'open', 'partial')",
   );
   const used = opts.excludeUsed === false ? new Set<string>() : new Set(
-    (db.prepare("SELECT backing FROM ideas WHERE created_at >= ?").all(since) as { backing: string }[]).flatMap((r) => parseJson<{ clusters: string[] }>(r.backing, { clusters: [] }).clusters),
+    (db.prepare("SELECT backing FROM ideas WHERE created_at >= ? AND channel_id = ?").all(since, channel.id) as { backing: string }[]).flatMap((r) => parseJson<{ clusters: string[] }>(r.backing, { clusters: [] }).clusters),
   );
 
   const out: Opportunity[] = [];
@@ -72,7 +75,7 @@ export function findOpportunities(db: DB, opts: { days?: number; limit?: number;
     const reasons: string[] = [];
     let score = 0;
 
-    const intl = members.some((m) => INTERNATIONAL.has(m.category));
+    const intl = !channelHasIntl || members.some((m) => INTERNATIONAL.has(m.category));
     const publishers = [...new Set(members.map((m) => m.publisher ?? "Unknown"))];
     if (!intl && publishers.length >= 2) {
       score += 3.5;

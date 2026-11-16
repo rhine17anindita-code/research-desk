@@ -31,3 +31,16 @@ export function hostOf(url: string | null | undefined): string {
     return "";
   }
 }
+
+/** A cost expressed as a share of a budget, for people who think in proportions, not cents. */
+export function pctOf(amount: number, limit: number): string {
+  if (!limit || limit <= 0) return "—";
+  if (amount === 0) return "0%";
+  const p = (amount / limit) * 100;
+  if (p < 1) return "under 1%";
+  return `${Math.round(p)}%`;
+}
+
+export function modelName(id: string): string {
+  return id.replace(/^claude-/, "").replace(/-(\d+)-(\d+)$/, " $1.$2").replace(/-(\d+)$/, " $1").replace(/^\w/, (c) => c.toUpperCase());
+}

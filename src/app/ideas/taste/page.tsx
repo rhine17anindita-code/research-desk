@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { tasteStats } from "@/lib/ideation/repo";
-import { getSetting } from "@/lib/repo/settings";
+import { activeChannel } from "@/lib/channels";
 import { ANGLE_TYPES, FORMAT_BY_ID } from "@/lib/ideation/formats";
 import { TasteSummaryEditor } from "@/components/ideas/TasteSummaryEditor";
 import { timeAgo } from "@/lib/format";
@@ -29,12 +29,15 @@ function Bars({ rows, label }: { rows: { id: string; liked: number; passed: numb
 
 export default function TastePage() {
   const db = getDb();
-  const updatedAt = getSetting(db, "taste.updated_at");
+  const ch = activeChannel(db);
+  const updatedAt = ch.tasteUpdatedAt ?? "";
   const stats = tasteStats(db, updatedAt || undefined);
-  const summary = getSetting(db, "taste.summary");
-  const profile = getSetting(db, "profile.about");
+  const summary = ch.tasteSummary;
+  const profile = ch.profile;
 
   return (
+    <>
+    <h1 className="mb-4 font-serif text-[26px] font-semibold tracking-tight">What it has learned</h1>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <section className="space-y-5">
         <div className="card p-4">
@@ -44,7 +47,7 @@ export default function TastePage() {
             {profile ? "" : " — which you haven't filled in yet"}. Edit it freely; it&apos;s yours.
             {updatedAt ? ` Last updated ${timeAgo(updatedAt)}; ${stats.eventsSinceSummary} new choices since.` : ""}
           </p>
-          <TasteSummaryEditor initial={summary} eventsSince={stats.eventsSinceSummary} />
+          <TasteSummaryEditor key={ch.id} initial={summary} eventsSince={stats.eventsSinceSummary} channelId={ch.id} />
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="card p-4">
@@ -80,5 +83,6 @@ export default function TastePage() {
         </p>
       </aside>
     </div>
+    </>
   );
 }

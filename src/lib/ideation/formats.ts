@@ -21,6 +21,11 @@ export const CONTENT_FORMATS: FormatDef[] = [
   { id: "call-to-action", label: "Call to action / campaign", platform: "Any", medium: "written", craft: "A concrete ask of a named audience or institution; why now; evidence of the problem; a simple next step." },
   { id: "call-for-papers", label: "Call for papers / contributions", platform: "Academic · community", medium: "written", craft: "A theme with an open, important question; who should contribute; what kinds of evidence or perspectives are wanted." },
   { id: "podcast", label: "Podcast / audio episode", platform: "Spotify · YouTube", medium: "visual", craft: "A narrative or conversation built around one question; a guest or voice who knows something the audience does not." },
+  { id: "talking-head", label: "Talking-head video", platform: "YouTube · Reels", medium: "visual", craft: "One strong opinion or explanation delivered to camera; tight script; on-screen proof (documents, clips, maps) every few seconds." },
+  { id: "interview", label: "Interview", platform: "YouTube · podcast · print", medium: "visual", craft: "A guest with unique access or experience; questions that get beyond their talking points; one revelation worth clipping." },
+  { id: "documentary", label: "Mini-documentary", platform: "YouTube · streaming", medium: "visual", craft: "20–45 min; characters, scenes and archive; a narrative arc with a mystery or conflict that resolves." },
+  { id: "series", label: "Series / recurring segment", platform: "Any", medium: "visual", craft: "A repeatable premise with a strong name; each episode stands alone; a reason to come back." },
+  { id: "newsletter", label: "Newsletter issue", platform: "Substack · email", medium: "written", craft: "A distinctive voice; one main story plus quick hits; a line readers forward." },
 ];
 
 export const FORMAT_BY_ID = Object.fromEntries(CONTENT_FORMATS.map((f) => [f.id, f])) as Record<string, FormatDef>;

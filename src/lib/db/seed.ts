@@ -21,6 +21,7 @@ export function seedDefaults(db: Database.Database): void {
     for (const f of DEFAULT_FEEDS) {
       insFeed.run(newId("feed"), f.name, f.url, f.siteUrl ?? null, f.region, f.language ?? "en", f.category, f.enabled === false ? 0 : 1, now, now);
     }
+    assignFeedChannels(db);
 
     const insSignal = db.prepare(
       `INSERT OR IGNORE INTO signals (id, label, description, cues, weight, learned, enabled, builtin, created_at, updated_at)
@@ -48,8 +49,23 @@ function addNewCatalogFeeds(db: Database.Database): void {
       `INSERT OR IGNORE INTO feeds (id, name, url, site_url, region, language, category, enabled, priority, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
     );
+    const existing = new Set((db.prepare("SELECT url FROM feeds").all() as { url: string }[]).map((r) => r.url));
     for (const f of DEFAULT_FEEDS) ins.run(newId("feed"), f.name, f.url, f.siteUrl ?? null, f.region, f.language ?? "en", f.category, f.enabled === false ? 0 : 1, now, now);
+    assignFeedChannels(db, DEFAULT_FEEDS.filter((f) => !existing.has(f.url)).map((f) => f.url));
     db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('feeds.catalog_version', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
       .run(JSON.stringify(FEED_CATALOG_VERSION), now);
   })();
+}
+
+/** Put default feeds into their channels (only feeds listed in `onlyUrls`, when given). */
+function assignFeedChannels(db: Database.Database, onlyUrls?: string[]): void {
+  const only = onlyUrls ? new Set(onlyUrls) : null;
+  const byUrl = db.prepare("SELECT id FROM feeds WHERE url = ?");
+  const ins = db.prepare("INSERT OR IGNORE INTO channel_feeds (channel_id, feed_id) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM channels WHERE id = ?)");
+  for (const f of DEFAULT_FEEDS) {
+    if (only && !only.has(f.url)) continue;
+    const row = byUrl.get(f.url) as { id: string } | undefined;
+    if (!row) continue;
+    for (const ch of f.channels ?? ["ch_default"]) ins.run(ch, row.id, ch);
+  }
 }

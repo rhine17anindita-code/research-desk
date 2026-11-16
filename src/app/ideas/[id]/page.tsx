@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { getIdea, getInspiration } from "@/lib/ideation/repo";
 import { backingFor } from "@/lib/ideation/backing";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
+import { PitchCard } from "@/components/studio/PitchCard";
 import { IdeaActions } from "@/components/ideas/IdeaActions";
 import { GeneratePanel } from "@/components/ideas/GeneratePanel";
 import { Icon } from "@/components/Icon";
@@ -21,9 +22,15 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">
-        <Link href="/ideas/saved" className="mb-3 inline-block text-[12.5px] text-muted hover:text-ink"><Icon name="arrowLeft" size={13} className="inline" /> Saved ideas</Link>
-        <IdeaCard idea={idea} backing={backing} />
-        <div className="mt-3"><IdeaActions idea={idea} /></div>
+        <Link href="/ideas/saved" className="mb-3 inline-block text-[12.5px] text-muted hover:text-ink">All saved ideas</Link>
+        {idea.origin === "user" ? (
+          <div className="card p-5"><PitchCard initial={idea} /></div>
+        ) : (
+          <>
+            <IdeaCard idea={idea} backing={backing} />
+            <div className="mt-3"><IdeaActions idea={idea} /></div>
+          </>
+        )}
       </div>
       <aside className="space-y-4">
         <div className="card p-4 text-[12.5px] text-muted">
