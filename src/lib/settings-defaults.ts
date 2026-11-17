@@ -35,6 +35,8 @@ export interface AppSettings {
   "studio.seen_at": string;
   /** Last time the creator's own YouTube numbers were pulled. */
   "perf.youtube_synced_at": string;
+  /** Last time Instagram/Facebook numbers were pulled through the Meta connection. */
+  "perf.meta_synced_at": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -67,4 +69,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "ingest.interval_minutes": 15,
   "studio.seen_at": "",
   "perf.youtube_synced_at": "",
+  "perf.meta_synced_at": "",
 };

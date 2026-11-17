@@ -4,6 +4,8 @@ import { getSetting } from "@/lib/repo/settings";
 import { commentScan, LABEL, performance, type Pattern, type RankedPost } from "@/lib/performance/patterns";
 import { latestReport } from "@/lib/performance/store";
 import { syncYoutubeIfStale } from "@/lib/performance/youtube-sync";
+import { syncMetaIfStale } from "@/lib/performance/meta";
+import { MetaConnect } from "@/components/performance/MetaConnect";
 import type { CommentInsights, StrategyReport } from "@/lib/performance/ai";
 import { getIdea, type Idea } from "@/lib/ideation/repo";
 import { backingFor } from "@/lib/ideation/backing";
@@ -25,6 +27,7 @@ export default async function PerformancePage() {
   const db = getDb();
   const ch = activeChannel(db);
   if (youtubeConfigured() && ch.links.youtube) await syncYoutubeIfStale(db, 6);
+  await syncMetaIfStale(db, 6);
   const perf = performance(db);
   const scan = commentScan(db);
   const strategy = latestReport<StrategyReport>(db, "strategy");
@@ -78,12 +81,13 @@ export default async function PerformancePage() {
         {missing.map((p) => (
           <div key={p} className="card flex flex-col justify-center border-dashed px-4 py-3 text-[12.5px] text-muted">
             <span className="font-semibold text-ink-2">{LABEL[p]}</span>
-            No numbers yet — import an export below.
+            {p === "tiktok" ? "No numbers yet — import a TikTok export below." : "Not connected yet — see the direct connection below, or import an export."}
           </div>
         ))}
       </div>
 
-      <ImportPanel open={missing.length === 3} />
+      <MetaConnect />
+      <ImportPanel open={false} />
 
       {/* Strategist */}
       <section className="card px-4 py-4">

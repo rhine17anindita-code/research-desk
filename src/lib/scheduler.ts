@@ -37,6 +37,8 @@ export function startScheduler() {
       // The creator's own YouTube numbers and comments, every 6 hours.
       const { syncYoutubeIfStale } = await import("./performance/youtube-sync");
       await syncYoutubeIfStale(db, 6);
+      const { syncMetaIfStale } = await import("./performance/meta");
+      await syncMetaIfStale(db, 6);
     } catch (err) {
       console.error("[scheduler] ingest failed", (err as Error).message);
     } finally {
