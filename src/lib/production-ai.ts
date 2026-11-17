@@ -116,11 +116,11 @@ export async function writeOutline(db: DB, projectId: string, opts: { estimateOn
   const task = {
     task: "script.outline",
     system: `${WRITER}
-Plan the piece as a beat outline in markdown: a "## " heading per section, and under each 2–5 bullet beats saying what happens (the point, the fact with its [S#] label, the turn or mini-cliffhanger). Build from the hook to a payoff that answers it. Mark beats that still need a fact with [CHECK: …]. Keep it scannable — the creator will edit it before the draft.
+Plan the piece as a beat outline in markdown: a "## " heading per section, and under each 2–5 short bullet beats saying what happens (the point, the fact with its [S#] label, the turn or mini-cliffhanger). Keep it to about 300–450 words in total — beats, not script lines; the script comes next. Build from the hook to a payoff that answers it. Mark beats that still need a fact with [CHECK: …]. Keep it scannable — the creator will edit it before the draft.
 ${UNTRUSTED}`,
     user,
     schema: OutlineSchema,
-    maxTokens: 3000,
+    maxTokens: 8000,
     cacheParts: [projectId, user],
     bypassCache: true,
   };
@@ -162,7 +162,7 @@ Write the full script in markdown:
 ${UNTRUSTED}`,
     user,
     schema: DraftSchema,
-    maxTokens: 9000,
+    maxTokens: 12000,
     cacheParts: [projectId, user],
     bypassCache: !!opts.regenerate,
   };

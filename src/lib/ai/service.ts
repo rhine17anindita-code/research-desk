@@ -191,7 +191,11 @@ export async function runAiTask<T>(db: DB, task: AiTask<T>): Promise<AiResult<T>
     });
   } catch (err) {
     const message = (err as Error).message || "Unknown provider error";
-    logRequest(db, { task: task.task, provider: provider.id, model, status: "error", error: message.slice(0, 500), durationMs: Date.now() - started });
+    const u = (err as { usage?: { input: number; output: number; model: string } }).usage;
+    logRequest(db, {
+      task: task.task, provider: provider.id, model, status: "error", error: message.slice(0, 500), durationMs: Date.now() - started,
+      ...(u ? { inputTokens: u.input, outputTokens: u.output, cost: estimateCost(u.model, u.input, u.output) } : {}),
+    });
     return { ok: false, reason: "provider_error", message: `The AI provider returned an error: ${message}` };
   }
 

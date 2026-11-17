@@ -53,7 +53,10 @@ export class AnthropicProvider implements AiProvider {
       model: string;
     };
     if (response.stop_reason === "refusal") throw new Error("The model declined this request.");
-    if (response.stop_reason === "max_tokens") throw new Error("The reply hit the output limit before finishing.");
+    if (response.stop_reason === "max_tokens") {
+      // Still billed: carry the usage so the budget counts it.
+      throw Object.assign(new Error("The reply hit the output limit before finishing."), { usage: { input: response.usage.input_tokens, output: response.usage.output_tokens, model: response.model ?? req.model } });
+    }
     const text = response.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
     return { text, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens, model: response.model ?? req.model };
   }
