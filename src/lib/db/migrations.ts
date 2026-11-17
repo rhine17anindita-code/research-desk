@@ -835,4 +835,12 @@ CREATE TABLE expert_briefs (scope TEXT NOT NULL, ref_id TEXT NOT NULL, body TEXT
 ALTER TABLE expert_items ADD COLUMN ai_note TEXT;
 `,
   },
+  {
+    id: 22,
+    name: "fresher-news",
+    sql: `
+-- News felt stale: check feeds at least every 10 minutes (the Studio picker can still change it).
+UPDATE settings SET value = '10' WHERE key = 'ingest.interval_minutes' AND CAST(value AS INTEGER) > 10;
+`,
+  },
 ];
