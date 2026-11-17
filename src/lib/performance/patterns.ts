@@ -34,7 +34,7 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 function features(p: OwnPost, boost: (t: string) => string[]): string[] {
   const t = p.title ?? "";
   const f: string[] = [];
-  if (p.kind) f.push(`Format: ${({ short: "Shorts", video: "long videos", reel: "Reels", post: "photo/text posts", carousel: "carousels", story: "stories", live: "lives" } as Record<string, string>)[p.kind] ?? p.kind}`);
+  if (p.kind) f.push(`Format: ${({ short: "Shorts", video: p.platform === "youtube" ? "long videos" : "videos", reel: "Reels", post: "photo/text posts", carousel: "carousels", story: "stories", live: "lives" } as Record<string, string>)[p.kind] ?? p.kind}`);
   if (t) {
     if (/\?/.test(t)) f.push("A question in the title");
     if (/\d/.test(t)) f.push("A number in the title");
@@ -46,7 +46,8 @@ function features(p: OwnPost, boost: (t: string) => string[]): string[] {
     if (/\b(israel|gaza|iran|palestin|saudi|middle east)\b/i.test(t)) f.push("About the Middle East");
     if (/\b(pakistan)\b/i.test(t)) f.push("About Pakistan");
     for (const b of boost(t).slice(0, 2)) f.push(`Focus topic: ${b}`);
-    f.push(t.length <= 50 ? "Short title (≤50 characters)" : "Long title (50+ characters)");
+    // On Instagram/Facebook the "title" is the caption, where length means something else.
+    if (p.platform === "youtube" || p.platform === "tiktok") f.push(t.length <= 50 ? "Short title (≤50 characters)" : "Long title (50+ characters)");
   }
   if (p.durationS != null && ["short", "video", "reel"].includes(p.kind ?? "")) {
     const d = p.durationS;
