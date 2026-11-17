@@ -22,7 +22,7 @@ export interface MediaItem {
 const cache = new Map<string, { at: number; items: MediaItem[] }>();
 const TTL = 3600_000;
 
-async function json<T>(url: string): Promise<T> {
+export async function json<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(12000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as T;

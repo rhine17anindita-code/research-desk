@@ -33,6 +33,8 @@ export interface AppSettings {
   "ingest.interval_minutes": number;
   /** When the creator last looked at the Studio (for "new since you looked"). */
   "studio.seen_at": string;
+  /** Last time the creator's own YouTube numbers were pulled. */
+  "perf.youtube_synced_at": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -64,4 +66,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "ai.task_models": {},
   "ingest.interval_minutes": 15,
   "studio.seen_at": "",
+  "perf.youtube_synced_at": "",
 };

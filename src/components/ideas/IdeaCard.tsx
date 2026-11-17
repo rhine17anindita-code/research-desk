@@ -12,7 +12,9 @@ export interface BackingInfo {
 }
 
 const KIND_LABEL: Record<string, string> = { news: "From the news", trend: "Riding a trend", history: "History", archive: "Archive", statement: "A statement", culture: "Culture", inspiration: "From your inspiration", pitch: "Your idea", talk: "From a talk show",
-  research: "From your research", evergreen: "Evergreen" };
+  research: "From your research",
+  audience: "Your audience asked",
+  strategy: "From your strategy report", evergreen: "Evergreen" };
 
 export function FormatChip({ format }: { format: string }) {
   const f = FORMAT_BY_ID[format];

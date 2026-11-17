@@ -34,6 +34,9 @@ export function startScheduler() {
       const r = await ingestFeeds(db, { trigger: "scheduled" });
       console.log(`[scheduler] ingest: +${r.articlesNew} articles, ${r.clustersNew} new stories, ${r.feedsFailed} feed errors`);
       db.prepare("DELETE FROM ai_cache WHERE created_at < datetime('now', '-90 days')").run();
+      // The creator's own YouTube numbers and comments, every 6 hours.
+      const { syncYoutubeIfStale } = await import("./performance/youtube-sync");
+      await syncYoutubeIfStale(db, 6);
     } catch (err) {
       console.error("[scheduler] ingest failed", (err as Error).message);
     } finally {

@@ -8,6 +8,7 @@ import { listAnswers } from "../repo/questions";
 import { sourceForArticle, upsertSource } from "../repo/sources";
 import { clock, findMoments, textAround, transcriptFor } from "../transcripts";
 import { getResearch } from "../research-inbox";
+import { performanceBrief } from "../performance/patterns";
 import { ftsQuery, jaccard, truncate, uniqueTokens } from "../text";
 import { buildSourcePack, resolveRefs, type TaskOutcome } from "../research/ai-tasks";
 import type { Source } from "../types";
@@ -209,8 +210,10 @@ export async function generateIdeasV2(db: DB, opts: GenerateIdeasOptions = {}): 
   const existing = listIdeas(db, { limit: 80 }).map((i) => i.title);
   const formatsAllowed = opts.formats?.length ? opts.formats : opts.medium ? CONTENT_FORMATS.filter((f) => f.medium === opts.medium).map((f) => f.id) : formatIds;
 
+  const perf = performanceBrief(db);
   const user = [
     personalContext(db),
+    perf ? `WHAT WORKS FOR THIS CREATOR — their own numbers (lean towards formats, topics and title styles that beat their typical post; avoid what flops; don't copy old titles):\n${perf}` : "",
     ch.goodExamples.trim() ? `THE STANDARD TO BEAT — ideas and titles this creator would jump on:\n${ch.goodExamples.trim()}` : "",
     ch.badExamples.trim() ? `WHAT BORES THEM — never pitch like this:\n${ch.badExamples.trim()}` : "",
     ch.referenceCreators.trim() ? `REFERENCE CREATORS (match their curiosity, research depth and packaging — not their topics): ${ch.referenceCreators.trim()}` : "",

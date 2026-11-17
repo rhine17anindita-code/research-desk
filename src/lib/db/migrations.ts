@@ -553,4 +553,60 @@ CREATE TABLE research_items (
 CREATE INDEX idx_research_items_created ON research_items(created_at);
 `,
   },
+  {
+    id: 8,
+    name: "performance",
+    sql: `
+-- The creator's own posts on every platform, with their numbers (YouTube via API; others via CSV export).
+CREATE TABLE own_posts (
+  id TEXT PRIMARY KEY,               -- platform:post id
+  channel_id TEXT,
+  platform TEXT NOT NULL,            -- youtube | instagram | facebook | tiktok
+  post_id TEXT NOT NULL,
+  url TEXT,
+  title TEXT NOT NULL DEFAULT '',
+  kind TEXT,                         -- short | video | reel | post | carousel | story | live
+  published_at TEXT,
+  duration_s INTEGER,
+  views INTEGER, reach INTEGER, likes INTEGER, comments INTEGER, shares INTEGER, saves INTEGER, follows INTEGER,
+  thumbnail TEXT,
+  source TEXT NOT NULL,              -- api | csv
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_own_posts_platform ON own_posts(channel_id, platform, published_at);
+
+-- Account totals over time (followers, views), one row per platform per day.
+CREATE TABLE own_daily (
+  channel_id TEXT,
+  platform TEXT NOT NULL,
+  date TEXT NOT NULL,
+  followers INTEGER, views INTEGER, likes INTEGER, comments INTEGER, shares INTEGER, profile_views INTEGER,
+  PRIMARY KEY (channel_id, platform, date)
+);
+
+-- Public comments on the creator's own videos.
+CREATE TABLE own_comments (
+  id TEXT PRIMARY KEY,
+  channel_id TEXT,
+  platform TEXT NOT NULL,
+  post_id TEXT NOT NULL,
+  author TEXT,
+  text TEXT NOT NULL,
+  likes INTEGER NOT NULL DEFAULT 0,
+  replies INTEGER NOT NULL DEFAULT 0,
+  published_at TEXT,
+  fetched_at TEXT NOT NULL
+);
+CREATE INDEX idx_own_comments_post ON own_comments(post_id);
+
+-- AI reads: comment insights and strategist reports.
+CREATE TABLE own_reports (
+  id TEXT PRIMARY KEY,
+  channel_id TEXT,
+  kind TEXT NOT NULL,                -- comments | strategy
+  body TEXT NOT NULL,                -- JSON
+  created_at TEXT NOT NULL
+);
+`,
+  },
 ];

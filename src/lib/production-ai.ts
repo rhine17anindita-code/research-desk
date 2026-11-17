@@ -6,6 +6,7 @@ import { material, SYSTEM_BASE } from "./research/creator";
 import { resolveRefs, type TaskOutcome } from "./research/ai-tasks";
 import { getProduction, TYPE_BY_ID, updateProduction, type Production } from "./production";
 import { truncate } from "./text";
+import { performanceBrief } from "./performance/patterns";
 
 /**
  * Production drafts: a script in the creator's own voice, then everything around it
@@ -62,7 +63,8 @@ export async function writeScript(db: DB, projectId: string, opts: { estimateOnl
   const m = material(db, projectId);
   const p = getProduction(db, projectId);
   if (!m || !p) return { ok: false, reason: "provider_error", message: "Project not found" };
-  const user = [voiceBlock(db), itemBlock(p), opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", m.text].filter(Boolean).join("\n\n");
+  const perf = performanceBrief(db);
+  const user = [voiceBlock(db), itemBlock(p), perf ? `WHAT HAS WORKED FOR THEM (use for hook and pacing choices):\n${perf.split("\n").slice(0, 30).join("\n")}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", m.text].filter(Boolean).join("\n\n");
   const task = {
     task: "script.write",
     system: `${SYSTEM_BASE}
