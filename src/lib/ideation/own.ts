@@ -1,10 +1,10 @@
 import type { DB } from "../db";
-import { activeChannel, updateChannel } from "../channels";
+import { activeChannel, getChannel, updateChannel } from "../channels";
 import { ownChannelStats, resolveYoutubeChannel, type OwnChannel } from "../media";
 
 /** The active channel's own YouTube numbers, resolving and remembering the channel id on first use. */
-export async function ownYoutube(db: DB): Promise<OwnChannel | null> {
-  const ch = activeChannel(db);
+export async function ownYoutube(db: DB, channelId?: string): Promise<OwnChannel | null> {
+  const ch = (channelId && getChannel(db, channelId)) || activeChannel(db);
   let id = ch.youtubeChannelId;
   try {
     if (!id && ch.links.youtube) {

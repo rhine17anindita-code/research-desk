@@ -1,5 +1,5 @@
 import type { DB } from "../db";
-import { activeChannelId } from "../channels";
+import { activeChannelId, getChannel, listChannels } from "../channels";
 import { nowIso } from "../ids";
 import { getSetting, setSetting } from "../repo/settings";
 import { upsertDaily, upsertPost } from "./store";
@@ -14,6 +14,8 @@ import { upsertDaily, upsertPost } from "./store";
  */
 
 const API = "https://graph.facebook.com/v27.0";
+/** Optional: for reading and replying to messages later (needs Meta's approval for messages from the public). */
+export const META_MESSAGE_SCOPES = ["instagram_manage_messages", "pages_messaging", "pages_manage_metadata"];
 export const META_SCOPES = ["pages_show_list", "pages_read_engagement", "read_insights", "instagram_basic", "instagram_manage_insights", "instagram_manage_comments", "business_management"];
 
 export const metaConfigured = () => !!process.env.META_ACCESS_TOKEN?.trim();
@@ -55,6 +57,7 @@ async function all<T>(path: string, params: Record<string, string>, max: number,
 }
 
 interface PageInfo { id: string; name: string; token: string; ig: { id: string; username: string } | null }
+export interface MetaAccount { id: string; name: string; instagram: string | null }
 
 export interface MetaStatus {
   configured: boolean;
@@ -63,40 +66,50 @@ export interface MetaStatus {
   tokenKind: "user" | "page" | null;
   expiresAt: string | null;
   missingScopes: string[];
+  /** The Page this channel uses (and its Instagram). */
   page: { id: string; name: string } | null;
   instagram: { id: string; username: string } | null;
-  pages: { id: string; name: string }[];
+  /** True when this channel has picked its Page; false when it's a best guess. */
+  chosen: boolean;
+  /** Every Page (with its linked Instagram) the token can see. */
+  pages: MetaAccount[];
   syncedAt: string | null;
+  channel: { id: string; name: string };
 }
 
-/** Which Page (and its linked Instagram account) to use. A Page token is the Page itself. */
-async function resolvePage(db: DB): Promise<{ page: PageInfo | null; pages: { id: string; name: string }[]; kind: "user" | "page" }> {
+type Acc = { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } };
+const toInfo = (a: Acc, tok: string): PageInfo => ({ id: a.id, name: a.name, token: tok, ig: a.instagram_business_account ? { id: a.instagram_business_account.id, username: a.instagram_business_account.username ?? "" } : null });
+
+/**
+ * Which Page (and its linked Instagram) a channel uses. The channel's own choice wins; the main
+ * channel falls back to a best guess (its Facebook link, else the Page with Instagram); other
+ * channels get nothing until they choose, so two channels never share numbers by accident.
+ */
+async function resolvePage(db: DB, channelId = activeChannelId(db)): Promise<{ page: PageInfo | null; pages: MetaAccount[]; kind: "user" | "page"; chosen: boolean }> {
   // Meta says what kind of token it is; a Page token is the Page itself (its /me is the Page).
   const kind = (await graph<{ data?: { type?: string } }>("debug_token", { input_token: token() })).data?.type;
+  let accounts: Acc[];
   if (kind === "PAGE") {
-    const pg = await graph<{ id: string; name: string; instagram_business_account?: { id: string; username?: string } }>("me", { fields: "id,name,instagram_business_account{id,username}" });
-    const ig = pg.instagram_business_account;
-    return { page: { id: pg.id, name: pg.name, token: token(), ig: ig ? { id: ig.id, username: ig.username ?? "" } : null }, pages: [{ id: pg.id, name: pg.name }], kind: "page" };
+    const pg = await graph<Omit<Acc, "access_token">>("me", { fields: "id,name,instagram_business_account{id,username}" });
+    accounts = [{ ...pg, access_token: token() }];
+  } else {
+    accounts = await all<Acc>("me/accounts", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "50" }, 100);
   }
-  const accounts = await all<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }>(
-    "me/accounts", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "50" }, 100,
-  );
-  const pages = accounts.map((a) => ({ id: a.id, name: a.name }));
+  const pages = accounts.map((a) => ({ id: a.id, name: a.name, instagram: a.instagram_business_account?.username ?? null }));
+  const ch = getChannel(db, channelId);
+  const own = ch?.metaPageId ? accounts.find((a) => a.id === ch.metaPageId) : undefined;
+  if (own) return { page: toInfo(own, own.access_token), pages, kind: kind === "PAGE" ? "page" : "user", chosen: true };
+  const main = channelId === "ch_default" || listChannels(db).length === 1;
   const wanted = process.env.META_PAGE_ID?.trim();
-  const fbLink = (db.prepare("SELECT links FROM channels WHERE id = ?").get(activeChannelId(db)) as { links: string } | undefined)?.links ?? "";
-  const pick =
-    accounts.find((a) => a.id === wanted) ??
-    accounts.find((a) => fbLink.includes(a.id)) ??
-    accounts.find((a) => a.instagram_business_account) ??
-    accounts[0];
-  return {
-    page: pick ? { id: pick.id, name: pick.name, token: pick.access_token, ig: pick.instagram_business_account ? { id: pick.instagram_business_account.id, username: pick.instagram_business_account.username ?? "" } : null } : null,
-    pages, kind: "user",
-  };
+  const fbLink = ch?.links.facebook ?? "";
+  const guess = main
+    ? accounts.find((a) => a.id === wanted) ?? accounts.find((a) => fbLink.includes(a.id)) ?? accounts.find((a) => a.instagram_business_account) ?? accounts[0]
+    : undefined;
+  return { page: guess ? toInfo(guess, guess.access_token) : null, pages, kind: kind === "PAGE" ? "page" : "user", chosen: false };
 }
 
 export async function metaStatus(db: DB): Promise<MetaStatus> {
-  const base: MetaStatus = { configured: metaConfigured(), ok: false, error: null, tokenKind: null, expiresAt: null, missingScopes: [], page: null, instagram: null, pages: [], syncedAt: getSetting(db, "perf.meta_synced_at") || null };
+  const base: MetaStatus = { configured: metaConfigured(), ok: false, error: null, tokenKind: null, expiresAt: null, missingScopes: [], page: null, instagram: null, chosen: false, pages: [], syncedAt: getSetting(db, "perf.meta_synced_at") || null, channel: { id: activeChannelId(db), name: getChannel(db, activeChannelId(db))?.name ?? "" } };
   if (!base.configured) return base;
   try {
     const dbg = await graph<{ data?: { is_valid?: boolean; expires_at?: number; data_access_expires_at?: number; scopes?: string[]; type?: string } }>("debug_token", { input_token: token() });
@@ -107,7 +120,9 @@ export async function metaStatus(db: DB): Promise<MetaStatus> {
     const r = await resolvePage(db);
     base.tokenKind = r.kind;
     base.pages = r.pages;
-    if (!r.page) return { ...base, error: "The token can't see any Facebook Page. When making it, tick your Page in the list Meta shows." };
+    base.chosen = r.chosen;
+    if (!r.pages.length) return { ...base, error: "The token can't see any Facebook Page. When making it, tick your Page in the list Meta shows." };
+    if (!r.page) return { ...base, ok: true, error: null };
     base.page = { id: r.page.id, name: r.page.name };
     base.instagram = r.page.ig;
     return { ...base, ok: true };
@@ -155,10 +170,11 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Prom
 
 export interface MetaSyncResult { instagram: number; facebook: number; comments: number; warnings: string[] }
 
-export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promise<MetaSyncResult> {
+export async function syncMeta(db: DB, opts: { maxPosts?: number; channelId?: string } = {}): Promise<MetaSyncResult> {
   if (!metaConfigured()) throw new Error("Add META_ACCESS_TOKEN to the server's environment first.");
-  const { page } = await resolvePage(db);
-  if (!page) throw new Error("The token can't see any Facebook Page.");
+  const channelId = opts.channelId ?? activeChannelId(db);
+  const { page } = await resolvePage(db, channelId);
+  if (!page) throw new Error("Choose which Facebook Page / Instagram belongs to this channel first.");
   const res: MetaSyncResult = { instagram: 0, facebook: 0, comments: 0, warnings: [] };
   const today = nowIso().slice(0, 10);
   const max = opts.maxPosts ?? 150;
@@ -167,7 +183,7 @@ export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promis
   if (page.ig) {
     try {
       const acct = await graph<{ followers_count?: number; media_count?: number }>(page.ig.id, { fields: "followers_count,media_count,username" }, page.token);
-      upsertDaily(db, { platform: "instagram", date: today, followers: acct.followers_count ?? null });
+      upsertDaily(db, { platform: "instagram", date: today, followers: acct.followers_count ?? null }, channelId);
       const media = await all<IgMedia>(`${page.ig.id}/media`, { fields: "id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count,thumbnail_url,media_url", limit: "50" }, max, page.token);
       const insights = await pool(media, 5, (m) => igInsights(m, page.token));
       media.forEach((m, i) => {
@@ -177,7 +193,7 @@ export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promis
           platform: "instagram", postId: m.id, url: m.permalink ?? null, title: (m.caption ?? "").replace(/\s+/g, " ").slice(0, 500), kind, publishedAt: m.timestamp ? new Date(m.timestamp).toISOString() : null,
           durationS: null, views: ins.views ?? null, reach: ins.reach ?? null, likes: ins.likes ?? m.like_count ?? null, comments: ins.comments ?? m.comments_count ?? null,
           shares: ins.shares ?? null, saves: ins.saved ?? null, follows: ins.follows ?? null, thumbnail: m.thumbnail_url ?? (m.media_type === "IMAGE" ? m.media_url ?? null : null), source: "api",
-        });
+        }, channelId);
       });
       res.instagram = media.length;
 
@@ -191,7 +207,7 @@ export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promis
           const cs = await all<{ id: string; text?: string; username?: string; like_count?: number; timestamp?: string }>(`${m.id}/comments`, { fields: "id,text,username,like_count,timestamp", limit: "50" }, 100, page.token);
           for (const c of cs) {
             if (!c.text?.trim()) continue;
-            ins.run(`ig:${c.id}`, activeChannelId(db), m.id, c.username ?? null, c.text.slice(0, 2000), c.like_count ?? 0, c.timestamp ? new Date(c.timestamp).toISOString() : null, nowIso());
+            ins.run(`ig:${c.id}`, channelId, m.id, c.username ?? null, c.text.slice(0, 2000), c.like_count ?? 0, c.timestamp ? new Date(c.timestamp).toISOString() : null, nowIso());
             res.comments++;
           }
         } catch (e) {
@@ -207,7 +223,7 @@ export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promis
   // Facebook Page
   try {
     const p = await graph<{ followers_count?: number; fan_count?: number }>(page.id, { fields: "followers_count,fan_count" }, page.token);
-    upsertDaily(db, { platform: "facebook", date: today, followers: p.followers_count ?? p.fan_count ?? null });
+    upsertDaily(db, { platform: "facebook", date: today, followers: p.followers_count ?? p.fan_count ?? null }, channelId);
     const base = "id,message,created_time,permalink_url,shares,full_picture,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),attachments{media_type,type}";
     type FbPost = {
       id: string; message?: string; created_time?: string; permalink_url?: string; full_picture?: string; shares?: { count?: number };
@@ -230,7 +246,7 @@ export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promis
         kind: /reel/.test(t) ? "reel" : /video/.test(t) ? "video" : /album/.test(t) ? "carousel" : "post", publishedAt: fp.created_time ? new Date(fp.created_time).toISOString() : null,
         durationS: null, views: val("post_media_view") ?? val("post_video_views"), reach: val("post_total_media_view_unique"), likes: fp.reactions?.summary?.total_count ?? null,
         comments: fp.comments?.summary?.total_count ?? null, shares: fp.shares?.count ?? 0, saves: null, follows: null, thumbnail: fp.full_picture ?? null, source: "api",
-      });
+      }, channelId);
     }
     res.facebook = posts.length;
   } catch (e) {
@@ -241,15 +257,21 @@ export async function syncMeta(db: DB, opts: { maxPosts?: number } = {}): Promis
   return res;
 }
 
+/** Background sync for every channel that has a Page (the main channel uses its best guess). */
 export async function syncMetaIfStale(db: DB, hours = 6) {
   if (!metaConfigured()) return null;
   const last = getSetting(db, "perf.meta_synced_at");
   if (last && Date.now() - Date.parse(last) < hours * 3_600_000) return null;
-  try {
-    return await syncMeta(db);
-  } catch (e) {
-    console.error("[perf] meta sync failed", (e as Error).message);
-    setSetting(db, "perf.meta_synced_at", nowIso()); // don't hammer a broken token every minute
-    return null;
+  setSetting(db, "perf.meta_synced_at", nowIso()); // also stops a broken token being retried every minute
+  const out: Record<string, MetaSyncResult | string> = {};
+  for (const ch of listChannels(db)) {
+    if (!ch.metaPageId && ch.id !== "ch_default" && listChannels(db).length > 1) continue;
+    try {
+      out[ch.id] = await syncMeta(db, { channelId: ch.id });
+    } catch (e) {
+      out[ch.id] = (e as Error).message;
+      console.error("[perf] meta sync failed", ch.name, (e as Error).message);
+    }
   }
+  return out;
 }

@@ -609,4 +609,12 @@ CREATE TABLE own_reports (
 );
 `,
   },
+  {
+    id: 9,
+    name: "channel-meta-page",
+    sql: `
+-- Which Facebook Page (and its linked Instagram) belongs to each channel, when one Meta token sees several.
+ALTER TABLE channels ADD COLUMN meta_page_id TEXT;
+`,
+  },
 ];

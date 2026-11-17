@@ -26,7 +26,7 @@ const map = (r: Row): OwnPost => ({
 });
 
 /** Insert or update a post; numbers only ever replace with a real value (a missing column keeps the old one). */
-export function upsertPost(db: DB, p: PostInput): void {
+export function upsertPost(db: DB, p: PostInput, channelId = activeChannelId(db)): void {
   const id = `${p.platform}:${p.postId}`;
   db.prepare(
     `INSERT INTO own_posts (id, channel_id, platform, post_id, url, title, kind, published_at, duration_s, views, reach, likes, comments, shares, saves, follows, thumbnail, source, updated_at)
@@ -38,27 +38,27 @@ export function upsertPost(db: DB, p: PostInput): void {
        shares = COALESCE(excluded.shares, shares), saves = COALESCE(excluded.saves, saves), follows = COALESCE(excluded.follows, follows),
        thumbnail = COALESCE(excluded.thumbnail, thumbnail), source = excluded.source, updated_at = excluded.updated_at`,
   ).run(
-    id, activeChannelId(db), p.platform, p.postId, p.url, p.title ?? "", p.kind, p.publishedAt, p.durationS, p.views, p.reach, p.likes, p.comments, p.shares, p.saves, p.follows,
+    id, channelId, p.platform, p.postId, p.url, p.title ?? "", p.kind, p.publishedAt, p.durationS, p.views, p.reach, p.likes, p.comments, p.shares, p.saves, p.follows,
     p.thumbnail, p.source, nowIso(),
   );
 }
 
-export function listPosts(db: DB, opts: { platform?: string; days?: number; limit?: number } = {}): OwnPost[] {
+export function listPosts(db: DB, opts: { platform?: string; days?: number; limit?: number; channelId?: string } = {}): OwnPost[] {
   const where = ["(channel_id = ? OR channel_id IS NULL)"];
-  const args: unknown[] = [activeChannelId(db)];
+  const args: unknown[] = [opts.channelId ?? activeChannelId(db)];
   if (opts.platform) { where.push("platform = ?"); args.push(opts.platform); }
   if (opts.days) { where.push("published_at >= datetime('now', ?)"); args.push(`-${opts.days} days`); }
   return (db.prepare(`SELECT * FROM own_posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC LIMIT ?`).all(...args, opts.limit ?? 2000) as Row[]).map(map);
 }
 
 export interface DailyInput { platform: PerfPlatform; date: string; followers?: number | null; views?: number | null; likes?: number | null; comments?: number | null; shares?: number | null; profileViews?: number | null }
-export function upsertDaily(db: DB, d: DailyInput): void {
+export function upsertDaily(db: DB, d: DailyInput, channelId = activeChannelId(db)): void {
   db.prepare(
     `INSERT INTO own_daily (channel_id, platform, date, followers, views, likes, comments, shares, profile_views) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(channel_id, platform, date) DO UPDATE SET followers = COALESCE(excluded.followers, followers), views = COALESCE(excluded.views, views),
        likes = COALESCE(excluded.likes, likes), comments = COALESCE(excluded.comments, comments), shares = COALESCE(excluded.shares, shares),
        profile_views = COALESCE(excluded.profile_views, profile_views)`,
-  ).run(activeChannelId(db), d.platform, d.date, d.followers ?? null, d.views ?? null, d.likes ?? null, d.comments ?? null, d.shares ?? null, d.profileViews ?? null);
+  ).run(channelId, d.platform, d.date, d.followers ?? null, d.views ?? null, d.likes ?? null, d.comments ?? null, d.shares ?? null, d.profileViews ?? null);
 }
 export function listDaily(db: DB, platform: string, days = 120) {
   return db

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDb } from "./helpers";
 import { metaStatus, syncMeta } from "@/lib/performance/meta";
 import { listComments, listDaily, listPosts } from "@/lib/performance/store";
+import { createChannel, setActiveChannel, updateChannel } from "@/lib/channels";
 
 type Handler = (path: string, q: URLSearchParams) => unknown;
 function fakeGraph(h: Handler) {
@@ -98,5 +99,37 @@ describe("direct Meta connection", () => {
     expect(bad.ok).toBe(false);
     expect(bad.error).toContain("expired");
     expect(bad.error).not.toContain("PAGE_TOKEN");
+  });
+
+  it("lets each channel pick its own Page, and never hands a second channel the main one's numbers", async () => {
+    process.env.META_ACCESS_TOKEN = "USER_TOKEN";
+    fakeGraph((path, q) => {
+      if (path === "me/accounts")
+        return { data: [
+          { id: "p1", name: "Anindita Rhine", access_token: "PAGE_TOKEN", instagram_business_account: { id: "ig1", username: "anindita.rhine" } },
+          { id: "p2", name: "Second Channel", access_token: "PAGE2", instagram_business_account: { id: "ig2", username: "second.ch" } },
+        ] };
+      if (path === "ig2") return { followers_count: 77 };
+      if (path === "ig2/media") return { data: [] };
+      if (path === "p2") return { followers_count: 10 };
+      if (path === "p2/posts") return { data: [] };
+      return userToken(path, q);
+    });
+    const db = freshDb();
+    const main = await metaStatus(db);
+    expect(main.pages.map((p) => p.instagram)).toEqual(["anindita.rhine", "second.ch"]);
+    expect(main.chosen).toBe(false);
+    expect(main.page?.id).toBe("p1"); // best guess for the main channel
+
+    const second = createChannel(db, { name: "Second" });
+    setActiveChannel(db, second.id);
+    const before = await metaStatus(db);
+    expect(before.page).toBeNull(); // must choose
+    await expect(syncMeta(db)).rejects.toThrow(/Choose/);
+    updateChannel(db, second.id, { metaPageId: "p2" });
+    const after = await metaStatus(db);
+    expect(after).toMatchObject({ chosen: true, page: { id: "p2" }, instagram: { username: "second.ch" } });
+    await syncMeta(db);
+    expect(listDaily(db, "instagram", 5)[0].followers).toBe(77);
   });
 });

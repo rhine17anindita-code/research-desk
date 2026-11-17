@@ -1,5 +1,5 @@
 import type { DB } from "../db";
-import { activeChannel } from "../channels";
+import { activeChannel, listChannels } from "../channels";
 import { json, videoStats, youtubeConfigured } from "../media";
 import { ownYoutube } from "../ideation/own";
 import { nowIso } from "../ids";
@@ -15,9 +15,10 @@ import { listPosts, upsertDaily, upsertPost } from "./store";
 
 const key = () => encodeURIComponent(process.env.YOUTUBE_API_KEY!);
 
-export async function syncYoutube(db: DB, opts: { maxVideos?: number; commentVideos?: number } = {}): Promise<{ videos: number; comments: number } | null> {
+export async function syncYoutube(db: DB, opts: { maxVideos?: number; commentVideos?: number; channelId?: string } = {}): Promise<{ videos: number; comments: number } | null> {
   if (!youtubeConfigured()) return null;
-  const own = await ownYoutube(db);
+  const channelId = opts.channelId ?? activeChannel(db).id;
+  const own = await ownYoutube(db, channelId);
   if (!own) return null;
   const ch = await json<{ items?: { contentDetails: { relatedPlaylists: { uploads: string } } }[] }>(
     `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${own.id}&key=${key()}`,
@@ -50,19 +51,19 @@ export async function syncYoutube(db: DB, opts: { maxVideos?: number; commentVid
         platform: "youtube", postId: b.id, url: short ? `https://www.youtube.com/shorts/${b.id}` : `https://www.youtube.com/watch?v=${b.id}`, title: b.title,
         kind: st?.seconds == null ? null : short ? "short" : "video", publishedAt: b.publishedAt, durationS: st?.seconds ?? null, views: st?.views ?? null, reach: null,
         likes: st?.likes ?? null, comments: st?.comments ?? null, shares: null, saves: null, follows: null, thumbnail: b.thumb, source: "api",
-      });
+      }, channelId);
     }
   }
-  upsertDaily(db, { platform: "youtube", date: nowIso().slice(0, 10), followers: own.subscribers, views: own.totalViews });
+  upsertDaily(db, { platform: "youtube", date: nowIso().slice(0, 10), followers: own.subscribers, views: own.totalViews }, channelId);
 
   // Public comments on the most recent videos that have any.
   let comments = 0;
-  const recent = listPosts(db, { platform: "youtube", limit: 60 }).filter((p) => (p.comments ?? 0) > 0).slice(0, opts.commentVideos ?? 20);
+  const recent = listPosts(db, { platform: "youtube", limit: 60, channelId }).filter((p) => (p.comments ?? 0) > 0).slice(0, opts.commentVideos ?? 20);
   const ins = db.prepare(
     `INSERT INTO own_comments (id, channel_id, platform, post_id, author, text, likes, replies, published_at, fetched_at) VALUES (?, ?, 'youtube', ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET likes = excluded.likes, replies = excluded.replies, text = excluded.text, fetched_at = excluded.fetched_at`,
   );
-  const chId = activeChannel(db).id;
+  const chId = channelId;
   for (const p of recent) {
     try {
       const j = await json<{ items?: { id: string; snippet: { totalReplyCount?: number; topLevelComment: { snippet: { authorDisplayName?: string; textOriginal?: string; likeCount?: number; publishedAt?: string } } } }[] }>(
@@ -82,14 +83,18 @@ export async function syncYoutube(db: DB, opts: { maxVideos?: number; commentVid
   return { videos: items.length, comments };
 }
 
-/** Sync if the last one is older than `hours` (used by the page and the background schedule). */
+/** Background sync for every channel with a YouTube link, if the last one is older than `hours`. */
 export async function syncYoutubeIfStale(db: DB, hours = 6) {
   const last = getSetting(db, "perf.youtube_synced_at");
   if (last && Date.now() - Date.parse(last) < hours * 3_600_000) return null;
-  try {
-    return await syncYoutube(db);
-  } catch (e) {
-    console.error("[perf] youtube sync failed", (e as Error).message);
-    return null;
+  let total = 0;
+  for (const ch of listChannels(db).filter((c) => c.links.youtube)) {
+    try {
+      total += (await syncYoutube(db, { channelId: ch.id }))?.videos ?? 0;
+    } catch (e) {
+      console.error("[perf] youtube sync failed", ch.name, (e as Error).message);
+    }
   }
+  setSetting(db, "perf.youtube_synced_at", nowIso());
+  return total;
 }
