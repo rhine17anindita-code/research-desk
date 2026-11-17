@@ -4,7 +4,7 @@ import { authMode, SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 const PUBLIC_PATHS = ["/login", "/api/login", "/api/logout", "/manifest.webmanifest", "/icon.svg"];
 // The Mac helper signs its own requests (checked in each route), so these skip the session check.
 // An explicit list, so a new route under /api/helper/ never skips the password by accident.
-const HELPER_PATHS = ["/api/helper/jobs", "/api/helper/transcript", "/api/helper/media", "/api/helper/page", "/api/helper/translation", "/api/helper/import", "/api/helper/wake"];
+const HELPER_PATHS = ["/api/helper/jobs", "/api/helper/transcript", "/api/helper/media", "/api/helper/page", "/api/helper/translation", "/api/helper/import", "/api/helper/wake", "/api/helper/health"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
