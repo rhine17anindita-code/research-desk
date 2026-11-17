@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExpertPanel } from "@/components/research/ExpertPanel";
 import { StoryLens } from "@/components/StoryLens";
 import { getNote, storyLens } from "@/lib/ideation/lens";
 import { freeAlternatives } from "@/lib/ingest/fulltext";
@@ -208,6 +209,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
         <Suspense>
           <StoryResearch clusterId={story.id} initialQuestions={questions} />
         </Suspense>
+        <div className="mt-4"><ExpertPanel scope="cluster" refId={story.id} /></div>
       </StoryShell>
     </div>
   );

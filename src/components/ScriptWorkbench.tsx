@@ -49,6 +49,9 @@ export function ScriptWorkbench({ p, presets, voice, onProduction }: { p: Produc
         </select>
         <ProjectDials docs={docs} voice={voice} preset={preset} onSave={(json) => { setDocs({ ...docs, dials: json }); saveDoc({ dials: json }); }} />
         <Link href="/voice" className="text-accent hover:underline">Voice Lab →</Link>
+        <label className="flex items-center gap-1 text-ink-2" title="Adds a section on what could fix this — options, who acts, examples from other countries, pros and cons — backed by the Solutions & expert views library.">
+          <input type="checkbox" checked={docs.solutions === "on"} onChange={(e) => { const v = e.target.checked ? "on" : ""; setDocs({ ...docs, solutions: v }); saveDoc({ solutions: v }); }} /> Include a solutions section
+        </label>
         <input className="input !w-full !py-1 text-[12.5px] sm:!w-80" value={direction} onChange={(e) => setDirection(e.target.value)} placeholder="Direction (optional): angle, tone, length, what to include…" />
       </div>
 

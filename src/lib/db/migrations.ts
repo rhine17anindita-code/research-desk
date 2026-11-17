@@ -811,4 +811,20 @@ CREATE TABLE yt_comp_videos (
 CREATE TABLE yt_checks (scope TEXT NOT NULL, key TEXT NOT NULL, done_at TEXT NOT NULL, PRIMARY KEY (scope, key));
 `,
   },
+  {
+    id: 20,
+    name: "expert-library",
+    sql: `
+-- Solutions & expert views: research, policy briefs, opinion, official texts, videos, background — gathered free per story/project/topic.
+CREATE TABLE expert_items (
+  id TEXT PRIMARY KEY, scope TEXT NOT NULL, ref_id TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, url TEXT NOT NULL,
+  publisher TEXT, authors TEXT, year INTEGER, snippet TEXT, provider TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '[]', score REAL NOT NULL DEFAULT 0,
+  saved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+  UNIQUE (scope, ref_id, url)
+);
+CREATE INDEX idx_expert_items_ref ON expert_items(scope, ref_id);
+CREATE TABLE expert_runs (scope TEXT NOT NULL, ref_id TEXT NOT NULL, query TEXT NOT NULL, fetched_at TEXT NOT NULL, PRIMARY KEY (scope, ref_id));
+CREATE TABLE expert_briefs (scope TEXT NOT NULL, ref_id TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (scope, ref_id));
+`,
+  },
 ];

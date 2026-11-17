@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExpertPanel } from "@/components/research/ExpertPanel";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getProject, listNotes, projectItemIds } from "@/lib/repo/projects";
@@ -58,6 +59,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </header>
 
           <ProductionPanel initial={getProduction(db, id)!} presets={getProfile(db).presets.map((x) => x.name)} voice={{ dials: getProfile(db).dials, presets: getProfile(db).presets }} />
+          <ExpertPanel scope="project" refId={id} compact />
           <ProjectYoutube projectId={id} />
           <ProjectMonetise projectId={id} />
 

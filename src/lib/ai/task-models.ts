@@ -18,6 +18,7 @@ export const TASK_GROUPS: TaskGroup[] = [
   { id: "talk", label: "Reading talk shows & podcasts", hint: "Mining an episode's transcript for claims, quotes and ideas", prefixes: ["talk."], defaultModel: "claude-sonnet-5-5" },
   { id: "strategy", label: "Strategist reports", hint: "Weekly read of your numbers: what works, what to make next", prefixes: ["strategy."], defaultModel: "claude-opus-5-5" },
   { id: "audience", label: "Reading your comments", hint: "What your audience asks, requests and pushes back on", prefixes: ["audience."], defaultModel: "claude-sonnet-5-5" },
+  { id: "solutions", label: "Solutions briefs", hint: "Options, pros and cons, precedents — from the expert library", prefixes: ["solutions."], defaultModel: "claude-sonnet-5-5" },
   { id: "deep", label: "Deep research", hint: "Multi-source research briefs", prefixes: ["deep."], defaultModel: "claude-opus-5-5" },
   { id: "answers", label: "Research questions & answers", hint: "Generating questions, quick and explored answers", prefixes: ["questions.", "answers."], defaultModel: "claude-sonnet-5-5" },
   { id: "assistant", label: "Assistant chat", hint: "Conversations on stories, questions and projects", prefixes: ["assistant."], defaultModel: "claude-sonnet-5-5" },

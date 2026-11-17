@@ -9,6 +9,7 @@ import { performanceBrief } from "./performance/patterns";
 import { bannedHits, getProfile, styleBlock } from "./voice";
 import { deepenSourceList } from "./research/deepen";
 import { FORMATS } from "./youtube/guide";
+import { gather, lastRun, solutionsMaterial, SOLUTIONS_INSTRUCTION } from "./experts";
 
 /**
  * Script writing, step by step, in the creator's voice (from Voice Lab):
@@ -69,6 +70,19 @@ export async function deepenSources(db: DB, projectId: string): Promise<{ checke
   return deepenSourceList(db, projectSources(db, projectId));
 }
 
+/** The solutions section's instruction and evidence, when the project has it switched on. */
+export function solutionsBlock(db: DB, p: Production): string {
+  if (p.docs.solutions !== "on") return "";
+  const m = solutionsMaterial(db, p.projectId);
+  return m ? `${SOLUTIONS_INSTRUCTION}\n\n${m}` : `${SOLUTIONS_INSTRUCTION}\n(No expert library gathered yet — use only solutions the sources below mention, and mark the section [CHECK: gather expert views].)`;
+}
+
+/** Solutions section on but no expert library yet: gather one first (free, open sources). */
+async function ensureSolutionsLibrary(db: DB, p: Production, estimateOnly?: boolean): Promise<void> {
+  if (estimateOnly || p.docs.solutions !== "on" || lastRun(db, "project", p.projectId)) return;
+  await gather(db, "project", p.projectId).catch(() => null);
+}
+
 const bigMaterial = (db: DB, projectId: string) => material(db, projectId, { maxChars: 60000, perSource: 6000 });
 
 // ---------------------------------------------------------------------------
@@ -81,6 +95,7 @@ export async function writeHooks(db: DB, projectId: string, opts: { estimateOnly
   const m = bigMaterial(db, projectId);
   const p = getProduction(db, projectId);
   if (!m || !p) return { ok: false, reason: "provider_error", message: "Project not found" };
+  await ensureSolutionsLibrary(db, p, opts.estimateOnly);
   const perf = performanceBrief(db);
   const user = [styleBlock(db, { preset: opts.preset, dials: projectDials(p) }), itemBlock(p), perf ? `WHAT HAS WORKED FOR THEM:\n${perf.split("\n").slice(0, 25).join("\n")}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 40000)].filter(Boolean).join("\n\n");
   const task = {
@@ -111,8 +126,9 @@ export async function writeOutline(db: DB, projectId: string, opts: { estimateOn
   const m = bigMaterial(db, projectId);
   const p = getProduction(db, projectId);
   if (!m || !p) return { ok: false, reason: "provider_error", message: "Project not found" };
+  await ensureSolutionsLibrary(db, p, opts.estimateOnly);
   const hook = opts.hook?.trim() || p.docs.hook || "";
-  const user = [styleBlock(db, { preset: opts.preset, dials: projectDials(p) }), itemBlock(p), hook ? `OPENING HOOK (chosen by the creator): ${hook}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 45000)].filter(Boolean).join("\n\n");
+  const user = [styleBlock(db, { preset: opts.preset, dials: projectDials(p) }), itemBlock(p), hook ? `OPENING HOOK (chosen by the creator): ${hook}` : "", solutionsBlock(db, p), opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 45000)].filter(Boolean).join("\n\n");
   const task = {
     task: "script.outline",
     system: `${WRITER}
@@ -148,6 +164,7 @@ export async function writeScript(db: DB, projectId: string, opts: { estimateOnl
     p.docs.hook ? `OPEN WITH THIS HOOK (the creator chose it; you may tighten it): ${p.docs.hook}` : "",
     p.docs.outline?.trim() ? `FOLLOW THIS OUTLINE (the creator approved it):\n${p.docs.outline.trim()}` : "",
     perf ? `WHAT HAS WORKED FOR THEM (hooks, pacing):\n${perf.split("\n").slice(0, 25).join("\n")}` : "",
+    solutionsBlock(db, p),
     opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "",
     m.text,
   ].filter(Boolean).join("\n\n");

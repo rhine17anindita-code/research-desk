@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { ExpertPanel } from "../research/ExpertPanel";
 import { Icon } from "../Icon";
 import type { Brief } from "@/lib/youtube/producer";
 import { FORMATS } from "@/lib/youtube/guide";
@@ -17,7 +18,7 @@ const STEPS: { id: StepId; label: string; what: string }[] = [
 ];
 interface Info {
   title: string; status: Record<StepId, boolean>; brief: Brief | null; dossier: string; outline: string; script: string; hook: string; format: string | null; channel: string | null;
-  prompter: { section: string; lines: string[] }[]; pack: string | null; publishDate: string | null; voiceReady: boolean;
+  prompter: { section: string; lines: string[] }[]; pack: string | null; publishDate: string | null; voiceReady: boolean; solutions: boolean;
 }
 
 /** One video, end to end: pick → the producer does strategy, research, outline, script, packaging → you record. */
@@ -95,6 +96,9 @@ export function Producer({ projectId }: { projectId: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <button className="btn-primary" disabled={!!running || done === 5} onClick={() => produceAll()}>{running ? "Producing…" : done === 0 ? "Produce everything" : done === 5 ? "All done" : "Produce the rest"}</button>
           <input className="input !w-full !py-1 text-[12.5px] sm:!w-96" value={direction} onChange={(e) => setDirection(e.target.value)} placeholder="Any direction for the producer (optional): tone, what to focus on, what to avoid" />
+          <label className="flex items-center gap-1 text-[12.5px] text-ink-2" title="The outline and script get a section on what could fix this — options, who acts, examples from other countries, pros and cons — backed by the expert library below the Research step.">
+            <input type="checkbox" checked={!!i.solutions} onChange={async (e) => { const v = e.target.checked; setI({ ...i, solutions: v }); await api(`/api/projects/${projectId}/production`, "PATCH", { docs: { solutions: v ? "on" : "" } }); }} /> Solutions section
+          </label>
           <Link href={`/research/${projectId}`} className="ml-auto text-[12.5px] text-accent hover:underline">Open the full project →</Link>
         </div>
         {msg && <p className="mt-2 text-[12.5px] text-warn">{msg}</p>}
@@ -132,6 +136,7 @@ export function Producer({ projectId }: { projectId: string }) {
         ) : <Empty text="Written in your voice (Voice Lab), following the format's structure and the brief." />)}
         {view === "package" && (i.pack && i.status.package ? <Doc text={i.pack} /> : <Empty text="Shot list, thumbnail and title options, Shorts to cut, description and captions — then the recording pack is complete." />)}
       </section>
+      {(view === "research" || view === "outline" || view === "script") && <ExpertPanel scope="project" refId={projectId} title="Solutions & expert views for this video" compact />}
     </div>
   );
 }

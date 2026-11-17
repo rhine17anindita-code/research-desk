@@ -38,6 +38,8 @@ export interface ProductionDocs {
   yt_channel?: string; yt_format?: string; yt_review?: string;
   /** YouTube producer: the strategy brief (JSON) and the research dossier (markdown). */
   yt_brief?: string; dossier?: string;
+  /** "on" = the outline and script include a solutions section backed by the expert library. */
+  solutions?: string;
 }
 export const DOC_KEYS = ["script", "shots", "thumbnail", "cutdowns", "captions"] as const;
 

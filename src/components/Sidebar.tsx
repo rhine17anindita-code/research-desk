@@ -19,6 +19,7 @@ const NAV: { section: string; items: { href: string; label: string; icon: string
     { href: "/inbox", label: "My research", icon: "pin" },
     { href: "/research", label: "Projects", icon: "research" },
     { href: "/library", label: "Library", icon: "library" },
+    { href: "/experts", label: "Expert views", icon: "question" },
     { href: "/search", label: "Search", icon: "search" },
   ] },
   { section: "Make", items: [
