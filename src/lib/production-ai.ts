@@ -21,7 +21,7 @@ import { deepenSourceList } from "./research/deepen";
 
 const SHAPE: Record<string, string> = {
   video: "A YouTube video of 8–14 minutes (about 1,300–2,100 spoken words): a cold open that lands the curiosity gap in the first 10 seconds, quick context, 3–5 escalating beats each ending on a mini-cliffhanger, a payoff that answers the title, and a short close.",
-  short: "A vertical Short/Reel/TikTok of 45–90 seconds (130–230 spoken words): the hook in the first line (no greeting), one surprising fact or reveal per 10 seconds, a twist or payoff, a one-line end that invites comments.",
+  short: "A vertical Short/Reel/TikTok of 45–90 seconds. HARD LIMIT: 230 spoken words (count them; cut, don't cram). The hook in the first line (no greeting), one surprising fact or reveal per 10 seconds, a twist or payoff, a one-line end that invites comments.",
   series: "One episode of a recurring series: open with the series' signature line, deliver one self-contained story, end with a tease for the next episode.",
   podcast: "A podcast episode run-sheet: intro monologue written out, then segments with talking points, the key facts to say, and transitions; an outro.",
   interview: "An interview plan: a written intro to camera about the guest and why now, then 12–18 questions in order (warm-up → substance → the hard question → future), with follow-ups and what each question is for. Include facts to have ready.",
