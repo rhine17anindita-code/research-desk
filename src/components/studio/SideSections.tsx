@@ -11,6 +11,71 @@ import type { Statement } from "@/lib/ideation/statements";
 import type { Opportunity } from "@/lib/ideation/opportunities";
 import type { Inspiration } from "@/lib/ideation/repo";
 import type { CreatorVideo } from "@/lib/ideation/creators";
+import type { OwnChannel } from "@/lib/media";
+import type { ChannelLinks } from "@/lib/channels";
+
+/** The creator's own channel at a glance: totals, latest uploads, and how each did against the usual. */
+export function YourChannelSection({ yt, links }: { yt: OwnChannel | null; links: ChannelLinks }) {
+  const longs = yt?.recent.filter((v) => v.seconds == null || v.seconds > 180) ?? [];
+  const median = (arr: number[]) => (arr.length ? [...arr].sort((a, b) => a - b)[Math.floor(arr.length / 2)] : 0);
+  const typical = median((yt?.recent ?? []).map((v) => v.views));
+  const best = Math.max(1, ...(yt?.recent ?? []).map((v) => v.views));
+  const others = (["instagram", "facebook", "tiktok"] as const).filter((p) => links[p]);
+  if (!yt && !links.youtube && !others.length) return null;
+  return (
+    <Section title="Your channel" hint={yt ? `Latest uploads vs your typical ${compact(typical)} views.` : links.youtube ? "Add the YouTube key to see your numbers." : undefined}>
+      {yt && (
+        <>
+          <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+            {[
+              ["Subscribers", yt.subscribers != null ? compact(yt.subscribers) : "hidden"],
+              ["Total views", compact(yt.totalViews)],
+              ["Videos", String(yt.videoCount)],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded-xl bg-accent-soft px-2 py-2">
+                <div className="font-serif text-[18px] font-bold text-ink">{v}</div>
+                <div className="text-[10.5px] uppercase tracking-wide text-muted">{k}</div>
+              </div>
+            ))}
+          </div>
+          <ul className="space-y-2">
+            {yt.recent.slice(0, 6).map((v) => {
+              const x = typical ? v.views / typical : 0;
+              return (
+                <li key={v.id}>
+                  <a href={v.url} target="_blank" rel="noreferrer" className="block">
+                    <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                      <span className="truncate text-ink-2 hover:underline">{v.title}</span>
+                      <span className={`shrink-0 tabular-nums ${x >= 1.5 ? "font-semibold text-ok" : x && x < 0.6 ? "text-warn" : "text-muted"}`}>
+                        {compact(v.views)}{x >= 1.5 ? ` · ${x.toFixed(1)}×` : ""}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                      <div className="h-full rounded-full bg-gradient-to-r from-accent to-accent-2" style={{ width: `${Math.max(3, (v.views / best) * 100)}%` }} />
+                    </div>
+                    <div className="mt-0.5 text-[10.5px] text-muted">
+                      {timeAgo(v.publishedAt)}{v.seconds != null && v.seconds <= 180 ? " · Short" : ""}{v.comments ? ` · ${v.comments} comment${v.comments === 1 ? "" : "s"}` : ""}
+                    </div>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          {longs.length === 0 && yt.recent.length > 0 && <p className="mt-2 text-[11.5px] text-muted">All recent uploads are Shorts.</p>}
+        </>
+      )}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {links.youtube && <a href={yt?.url ?? links.youtube} target="_blank" rel="noreferrer" className="chip hover:border-line-strong">YouTube ↗</a>}
+        {others.map((p) => (
+          <a key={p} href={links[p]} target="_blank" rel="noreferrer" className="chip hover:border-line-strong" title="Stats for this platform come in Phase 3 (CSV import until the API is approved)">
+            {{ instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok" }[p]} ↗
+          </a>
+        ))}
+        <Link href="/settings?tab=channels" className="chip hover:border-line-strong">Edit links</Link>
+      </div>
+    </Section>
+  );
+}
 
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(Math.round(n)));
 

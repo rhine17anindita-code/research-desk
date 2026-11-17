@@ -473,4 +473,17 @@ WHERE id = 'ch_default';
 UPDATE channels SET color = 'teal', news_ratio = 40 WHERE id = 'ch_culture';
 `,
   },
+  {
+    id: 5,
+    name: "channel-links",
+    sql: `
+ALTER TABLE channels ADD COLUMN links TEXT NOT NULL DEFAULT '{}';  -- JSON {youtube, instagram, facebook, tiktok}: the creator's own accounts
+ALTER TABLE channels ADD COLUMN youtube_channel_id TEXT;            -- resolved from the YouTube link (UC…)
+
+UPDATE channels SET
+  links = '{"youtube":"https://www.youtube.com/@aninditarhine","instagram":"https://www.instagram.com/anindita.rhine","facebook":"https://www.facebook.com/share/1515H3Qucqx/","tiktok":"https://www.tiktok.com/@anindita.rhine"}',
+  youtube_channel_id = 'UCIsWcCRLew0d0T11q1f2_ug'
+WHERE id = 'ch_default';
+`,
+  },
 ];

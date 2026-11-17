@@ -20,6 +20,7 @@ function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; fee
   const [f, setF] = useState({
     name: ch.name, description: ch.description ?? "", profile: ch.profile, geo: ch.geo, dailyIdeas: ch.dailyIdeas, color: ch.color, newsRatio: ch.newsRatio,
     boostTerms: ch.boostTerms.join(", "), muteTerms: ch.muteTerms.join(", "), goodExamples: ch.goodExamples, badExamples: ch.badExamples, referenceCreators: ch.referenceCreators,
+    links: { youtube: ch.links.youtube ?? "", instagram: ch.links.instagram ?? "", facebook: ch.links.facebook ?? "", tiktok: ch.links.tiktok ?? "" },
   });
   const [inChannel, setIn] = useState(new Set(members));
   const [showSources, setShowSources] = useState(false);
@@ -90,6 +91,20 @@ function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; fee
         <div>
           <label className="label">Creators whose style to aim for</label>
           <input className="input text-[12.5px]" value={f.referenceCreators} onChange={(e) => setF({ ...f, referenceCreators: e.target.value })} />
+        </div>
+        <div className="md:col-span-2">
+          <label className="label">Your accounts on this channel</label>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {(["youtube", "instagram", "facebook", "tiktok"] as const).map((p) => (
+              <input
+                key={p}
+                className="input text-[12.5px]"
+                placeholder={{ youtube: "YouTube link (youtube.com/@…)", instagram: "Instagram link", facebook: "Facebook page link", tiktok: "TikTok link" }[p]}
+                value={f.links[p]}
+                onChange={(e) => setF({ ...f, links: { ...f.links, [p]: e.target.value } })}
+              />
+            ))}
+          </div>
         </div>
         <div>
           <label className="label">News vs evergreen: {f.newsRatio}% news · {100 - f.newsRatio}% evergreen</label>

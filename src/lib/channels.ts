@@ -25,12 +25,39 @@ export interface Channel {
   goodExamples: string;
   badExamples: string;
   referenceCreators: string;
+  links: ChannelLinks;
+  youtubeChannelId: string | null;
+}
+
+export interface ChannelLinks { youtube?: string; instagram?: string; facebook?: string; tiktok?: string }
+export const PLATFORMS = ["youtube", "instagram", "facebook", "tiktok"] as const;
+
+/** Strip tracking parameters (?si=, ?_t=, ?xtok=…) from a profile link. */
+export function cleanProfileUrl(u: string): string {
+  const t = u.trim();
+  if (!t) return "";
+  try {
+    const x = new URL(/^https?:/.test(t) ? t : `https://${t}`);
+    return `${x.origin}${x.pathname}`;
+  } catch {
+    return t;
+  }
+}
+
+function parseLinks(s: string | null): ChannelLinks {
+  try {
+    const o = JSON.parse(s || "{}") as Record<string, unknown>;
+    return Object.fromEntries(PLATFORMS.filter((p) => typeof o[p] === "string" && o[p]).map((p) => [p, o[p] as string]));
+  } catch {
+    return {};
+  }
 }
 
 interface Row {
   id: string; name: string; description: string | null; profile: string; taste_summary: string; taste_updated_at: string | null; geo: string;
   daily_ideas: number; last_daily_at: string | null; position: number;
   color: string; news_ratio: number; boost_terms: string; mute_terms: string; good_examples: string; bad_examples: string; reference_creators: string;
+  links: string | null; youtube_channel_id: string | null;
 }
 
 const map = (r: Row): Channel => ({
@@ -38,6 +65,7 @@ const map = (r: Row): Channel => ({
   dailyIdeas: !!r.daily_ideas, lastDailyAt: r.last_daily_at, position: r.position,
   color: r.color, newsRatio: r.news_ratio, boostTerms: splitTerms(r.boost_terms), muteTerms: splitTerms(r.mute_terms),
   goodExamples: r.good_examples, badExamples: r.bad_examples, referenceCreators: r.reference_creators,
+  links: parseLinks(r.links), youtubeChannelId: r.youtube_channel_id,
 });
 
 export function splitTerms(s: string): string[] {
@@ -97,7 +125,7 @@ export function createChannel(db: DB, input: { name: string; description?: strin
   return getChannel(db, id)!;
 }
 
-export type ChannelPatch = Partial<Pick<Channel, "name" | "description" | "profile" | "tasteSummary" | "tasteUpdatedAt" | "geo" | "dailyIdeas" | "lastDailyAt" | "color" | "newsRatio" | "goodExamples" | "badExamples" | "referenceCreators">> & {
+export type ChannelPatch = Partial<Pick<Channel, "name" | "description" | "profile" | "tasteSummary" | "tasteUpdatedAt" | "geo" | "dailyIdeas" | "lastDailyAt" | "color" | "newsRatio" | "goodExamples" | "badExamples" | "referenceCreators" | "links" | "youtubeChannelId">> & {
   boostTerms?: string[] | string;
   muteTerms?: string[] | string;
 };
@@ -106,13 +134,18 @@ export function updateChannel(db: DB, id: string, patch: ChannelPatch): Channel 
   const c = getChannel(db, id);
   if (!c) return null;
   const n = { ...c, ...patch };
+  if (patch.links) {
+    n.links = Object.fromEntries(PLATFORMS.map((p) => [p, cleanProfileUrl(patch.links?.[p] ?? "")]).filter(([, v]) => v));
+    // A new YouTube link means the channel id has to be looked up again.
+    if (n.links.youtube !== c.links.youtube && patch.youtubeChannelId === undefined) n.youtubeChannelId = null;
+  }
   const terms = (v: string[] | string) => (Array.isArray(v) ? v : splitTerms(v)).join(", ");
   db.prepare(
     `UPDATE channels SET name = ?, description = ?, profile = ?, taste_summary = ?, taste_updated_at = ?, geo = ?, daily_ideas = ?, last_daily_at = ?,
-       color = ?, news_ratio = ?, boost_terms = ?, mute_terms = ?, good_examples = ?, bad_examples = ?, reference_creators = ?, updated_at = ? WHERE id = ?`,
+       color = ?, news_ratio = ?, boost_terms = ?, mute_terms = ?, good_examples = ?, bad_examples = ?, reference_creators = ?, links = ?, youtube_channel_id = ?, updated_at = ? WHERE id = ?`,
   ).run(
     n.name, n.description, n.profile, n.tasteSummary, n.tasteUpdatedAt, n.geo.toUpperCase().slice(0, 2), n.dailyIdeas ? 1 : 0, n.lastDailyAt,
-    n.color, Math.max(0, Math.min(100, Math.round(n.newsRatio))), terms(n.boostTerms), terms(n.muteTerms), n.goodExamples, n.badExamples, n.referenceCreators, nowIso(), id,
+    n.color, Math.max(0, Math.min(100, Math.round(n.newsRatio))), terms(n.boostTerms), terms(n.muteTerms), n.goodExamples, n.badExamples, n.referenceCreators, JSON.stringify(n.links), n.youtubeChannelId, nowIso(), id,
   );
   return getChannel(db, id);
 }

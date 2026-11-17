@@ -151,3 +151,57 @@ export function isoSeconds(d: string | undefined): number | null {
 export function youtubeId(url: string): string | null {
   return url.match(/[?&]v=([\w-]{11})/)?.[1] ?? url.match(/youtu\.be\/([\w-]{11})/)?.[1] ?? url.match(/shorts\/([\w-]{11})/)?.[1] ?? null;
 }
+
+export interface OwnVideo { id: string; title: string; url: string; thumbnail: string | null; publishedAt: string; views: number; likes: number; comments: number; seconds: number | null }
+export interface OwnChannel { id: string; title: string; url: string; subscribers: number | null; totalViews: number; videoCount: number; recent: OwnVideo[] }
+const ownCache = new Map<string, { at: number; data: OwnChannel | null }>();
+
+/** Resolve a YouTube link (…/@handle, …/channel/UC…) to a channel id. */
+export async function resolveYoutubeChannel(link: string): Promise<string | null> {
+  if (!youtubeConfigured()) return null;
+  const direct = link.match(/\/channel\/(UC[\w-]{22})/)?.[1];
+  if (direct) return direct;
+  const handle = link.match(/\/(@[\w.-]+)/)?.[1];
+  if (!handle) return null;
+  const j = await json<{ items?: { id: string }[] }>(
+    `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${encodeURIComponent(process.env.YOUTUBE_API_KEY!)}`,
+  );
+  return j.items?.[0]?.id ?? null;
+}
+
+/** The creator's own channel: totals plus the latest uploads with their numbers (3 quota units, cached 1h). */
+export async function ownChannelStats(channelId: string, limit = 12): Promise<OwnChannel | null> {
+  if (!youtubeConfigured()) return null;
+  const hit = ownCache.get(channelId);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const key = encodeURIComponent(process.env.YOUTUBE_API_KEY!);
+  const ch = await json<{ items?: { id: string; snippet: { title: string; customUrl?: string }; statistics: { viewCount?: string; subscriberCount?: string; hiddenSubscriberCount?: boolean; videoCount?: string }; contentDetails: { relatedPlaylists: { uploads: string } } }[] }>(
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${channelId}&key=${key}`,
+  );
+  const c = ch.items?.[0];
+  if (!c) {
+    ownCache.set(channelId, { at: Date.now(), data: null });
+    return null;
+  }
+  const pl = await json<{ items?: { snippet: { title: string; publishedAt: string; resourceId: { videoId: string }; thumbnails?: Record<string, { url: string }> } }[] }>(
+    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${Math.min(50, limit)}&playlistId=${c.contentDetails.relatedPlaylists.uploads}&key=${key}`,
+  );
+  const items = (pl.items ?? []).filter((i) => i.snippet.title !== "Private video" && i.snippet.title !== "Deleted video");
+  const stats = await videoStats(items.map((i) => i.snippet.resourceId.videoId));
+  const recent: OwnVideo[] = items.map((i) => {
+    const id = i.snippet.resourceId.videoId;
+    const st = stats.get(id);
+    const th = i.snippet.thumbnails ?? {};
+    return {
+      id, title: i.snippet.title, url: `https://www.youtube.com/watch?v=${id}`, thumbnail: (th.medium ?? th.high ?? th.default)?.url ?? null,
+      publishedAt: i.snippet.publishedAt, views: st?.views ?? 0, likes: st?.likes ?? 0, comments: st?.comments ?? 0, seconds: st?.seconds ?? null,
+    };
+  });
+  const data: OwnChannel = {
+    id: c.id, title: c.snippet.title, url: c.snippet.customUrl ? `https://www.youtube.com/${c.snippet.customUrl}` : `https://www.youtube.com/channel/${c.id}`,
+    subscribers: c.statistics.hiddenSubscriberCount ? null : Number(c.statistics.subscriberCount ?? 0),
+    totalViews: Number(c.statistics.viewCount ?? 0), videoCount: Number(c.statistics.videoCount ?? 0), recent,
+  };
+  ownCache.set(channelId, { at: Date.now(), data });
+  return data;
+}

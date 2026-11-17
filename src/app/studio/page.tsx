@@ -12,9 +12,10 @@ import { GeneratePanel } from "@/components/ideas/GeneratePanel";
 import { Composer } from "@/components/studio/Composer";
 import { Pipeline } from "@/components/studio/Pipeline";
 import { DailyTrigger } from "@/components/studio/DailyTrigger";
-import { CreatorsSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
+import { CreatorsSection, YourChannelSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
 import { referenceVideos } from "@/lib/ideation/creators";
 import { youtubeConfigured } from "@/lib/media";
+import { ownYoutube } from "@/lib/ideation/own";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,7 @@ export default async function StudioPage() {
         </div>
 
         <aside className="space-y-4">
+          <YourChannelSection yt={await ownYoutube(db)} links={ch.links} />
           <StatementsSection statements={findStatements(db, { limit: 10 })} />
           <UntoldSection opps={findOpportunities(db, { limit: 8 })} />
           <CreatorsSection videos={await referenceVideos(db, 8)} hasKey={youtubeConfigured()} />
