@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { MakeVideo, type ProductionRow } from "./MakeVideo";
 import { Icon } from "../Icon";
 import { DIAGNOSIS, FORMATS, KIT_UPGRADES, LAUNCH, RULES, SET_GUIDE, THUMBNAIL_RULES, WORKFLOW, type GuideSection } from "@/lib/youtube/guide";
 import type { Competitor, CompVideo, WeekBlock, YppProgress, YtChannel } from "@/lib/youtube";
@@ -10,13 +11,14 @@ import type { Competitor, CompVideo, WeekBlock, YppProgress, YtChannel } from "@
 interface Data {
   channels: YtChannel[]; selected: string | null; progress: YppProgress | null; plan: { blocks: WeekBlock[]; summary: string; rules: string[] };
   competitors: Competitor[]; breakouts: CompVideo[]; launchChecks: string[]; setChecks: string[]; suggestions: { name: string; id: string }[];
+  productions: ProductionRow[];
 }
-type Tab = "plan" | "channels" | "formats" | "set" | "workflow" | "competitors" | "optimise" | "rules";
-const TABS: [Tab, string][] = [["plan", "Plan & progress"], ["channels", "Channels"], ["formats", "Formats"], ["set", "Set, light & sound"], ["workflow", "Workflow"], ["competitors", "Competitors & missed angles"], ["optimise", "Titles & thumbnails"], ["rules", "Rules"]];
+type Tab = "make" | "plan" | "channels" | "formats" | "set" | "workflow" | "competitors" | "optimise" | "rules";
+const TABS: [Tab, string][] = [["make", "Make a video"], ["plan", "Plan & progress"], ["channels", "Channels"], ["formats", "Formats"], ["set", "Set, light & sound"], ["workflow", "Workflow"], ["competitors", "Competitors & missed angles"], ["optimise", "Titles & thumbnails"], ["rules", "Rules"]];
 const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(n >= 1e4 ? 0 : 1)}K` : String(n));
 
 /** YouTube: building, growing and optimising channels from scratch. */
-export function YoutubeStudio({ initialTab = "plan" }: { initialTab?: Tab }) {
+export function YoutubeStudio({ initialTab = "make" }: { initialTab?: Tab }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [yt, setYt] = useState<string | null>(null);
   const [d, setD] = useState<Data | null>(null);
@@ -43,6 +45,7 @@ export function YoutubeStudio({ initialTab = "plan" }: { initialTab?: Tab }) {
         </select>
       </header>
       <div className="flex flex-wrap gap-1">{TABS.map(([t, l]) => <button key={t} className={tab === t ? "chip-accent" : "chip"} onClick={() => setTab(t)}>{l}</button>)}</div>
+      {tab === "make" && cur && <MakeVideo ytChannelId={cur.id} channelName={cur.name} productions={d.productions} />}
       {tab === "plan" && cur && <Plan d={d} cur={cur} reload={load} />}
       {tab === "channels" && <Channels d={d} reload={load} check={check} />}
       {tab === "formats" && <Formats cur={cur} reload={load} />}

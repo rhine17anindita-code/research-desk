@@ -36,6 +36,8 @@ export interface ProductionDocs {
   monetise?: string;
   /** YouTube: which channel it's for, which format, and the 48-hour review (JSON). */
   yt_channel?: string; yt_format?: string; yt_review?: string;
+  /** YouTube producer: the strategy brief (JSON) and the research dossier (markdown). */
+  yt_brief?: string; dossier?: string;
 }
 export const DOC_KEYS = ["script", "shots", "thumbnail", "cutdowns", "captions"] as const;
 

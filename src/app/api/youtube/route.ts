@@ -20,5 +20,13 @@ export const GET = route((req: Request) => {
     launchChecks: yt ? checks(db, `launch:${yt.id}`) : [],
     setChecks: checks(db, "set"),
     suggestions,
+    // Videos in production for this channel, newest first.
+    productions: yt
+      ? (db.prepare("SELECT id, title, production_stage AS stage, publish_date AS publishDate, updated_at AS updatedAt, production FROM projects WHERE json_extract(production, '$.yt_channel') = ? AND stage != 'archived' ORDER BY updated_at DESC LIMIT 30").all(yt.id) as { id: string; title: string; stage: string; publishDate: string | null; updatedAt: string; production: string }[])
+          .map(({ production, ...r }) => {
+            const d = JSON.parse(production || "{}") as Record<string, string>;
+            return { ...r, steps: { brief: !!d.yt_brief, research: !!d.dossier, outline: !!d.outline, script: !!d.script, package: !!d.captions } };
+          })
+      : [],
   };
 });

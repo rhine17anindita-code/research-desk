@@ -7,7 +7,7 @@ import { jaccard, uniqueTokens } from "./text";
 import { parseJson } from "./db";
 import { familiarityDays, isOldNews } from "./ideation/familiarity";
 
-const SHOWBIZ = /\b(actor|actress|film|movie|box office|celebrity|singer|album|oscars?|grammys?|netflix|hollywood|bollywood|dhallywood|james bond|007|trailer|premiere|royal baby|influencer|reality show|met gala|fashion week)\b/i;
+export const SHOWBIZ = /\b(actor|actress|film|movie|box office|celebrity|singer|album|oscars?|grammys?|netflix|hollywood|bollywood|dhallywood|james bond|007|trailer|premiere|royal baby|influencer|reality show|met gala|fashion week)\b/i;
 
 /**
  * What changed since the creator last looked, and what is blowing up right now.
