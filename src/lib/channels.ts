@@ -27,6 +27,7 @@ export interface Channel {
   referenceCreators: string;
   links: ChannelLinks;
   youtubeChannelId: string | null;
+  voiceSamples: string;
 }
 
 export interface ChannelLinks { youtube?: string; instagram?: string; facebook?: string; tiktok?: string }
@@ -57,7 +58,7 @@ interface Row {
   id: string; name: string; description: string | null; profile: string; taste_summary: string; taste_updated_at: string | null; geo: string;
   daily_ideas: number; last_daily_at: string | null; position: number;
   color: string; news_ratio: number; boost_terms: string; mute_terms: string; good_examples: string; bad_examples: string; reference_creators: string;
-  links: string | null; youtube_channel_id: string | null;
+  links: string | null; youtube_channel_id: string | null; voice_samples: string | null;
 }
 
 const map = (r: Row): Channel => ({
@@ -65,7 +66,7 @@ const map = (r: Row): Channel => ({
   dailyIdeas: !!r.daily_ideas, lastDailyAt: r.last_daily_at, position: r.position,
   color: r.color, newsRatio: r.news_ratio, boostTerms: splitTerms(r.boost_terms), muteTerms: splitTerms(r.mute_terms),
   goodExamples: r.good_examples, badExamples: r.bad_examples, referenceCreators: r.reference_creators,
-  links: parseLinks(r.links), youtubeChannelId: r.youtube_channel_id,
+  links: parseLinks(r.links), youtubeChannelId: r.youtube_channel_id, voiceSamples: r.voice_samples ?? "",
 });
 
 export function splitTerms(s: string): string[] {
@@ -125,7 +126,7 @@ export function createChannel(db: DB, input: { name: string; description?: strin
   return getChannel(db, id)!;
 }
 
-export type ChannelPatch = Partial<Pick<Channel, "name" | "description" | "profile" | "tasteSummary" | "tasteUpdatedAt" | "geo" | "dailyIdeas" | "lastDailyAt" | "color" | "newsRatio" | "goodExamples" | "badExamples" | "referenceCreators" | "links" | "youtubeChannelId">> & {
+export type ChannelPatch = Partial<Pick<Channel, "name" | "description" | "profile" | "tasteSummary" | "tasteUpdatedAt" | "geo" | "dailyIdeas" | "lastDailyAt" | "color" | "newsRatio" | "goodExamples" | "badExamples" | "referenceCreators" | "links" | "youtubeChannelId" | "voiceSamples">> & {
   boostTerms?: string[] | string;
   muteTerms?: string[] | string;
 };
@@ -142,10 +143,10 @@ export function updateChannel(db: DB, id: string, patch: ChannelPatch): Channel 
   const terms = (v: string[] | string) => (Array.isArray(v) ? v : splitTerms(v)).join(", ");
   db.prepare(
     `UPDATE channels SET name = ?, description = ?, profile = ?, taste_summary = ?, taste_updated_at = ?, geo = ?, daily_ideas = ?, last_daily_at = ?,
-       color = ?, news_ratio = ?, boost_terms = ?, mute_terms = ?, good_examples = ?, bad_examples = ?, reference_creators = ?, links = ?, youtube_channel_id = ?, updated_at = ? WHERE id = ?`,
+       color = ?, news_ratio = ?, boost_terms = ?, mute_terms = ?, good_examples = ?, bad_examples = ?, reference_creators = ?, links = ?, youtube_channel_id = ?, voice_samples = ?, updated_at = ? WHERE id = ?`,
   ).run(
     n.name, n.description, n.profile, n.tasteSummary, n.tasteUpdatedAt, n.geo.toUpperCase().slice(0, 2), n.dailyIdeas ? 1 : 0, n.lastDailyAt,
-    n.color, Math.max(0, Math.min(100, Math.round(n.newsRatio))), terms(n.boostTerms), terms(n.muteTerms), n.goodExamples, n.badExamples, n.referenceCreators, JSON.stringify(n.links), n.youtubeChannelId, nowIso(), id,
+    n.color, Math.max(0, Math.min(100, Math.round(n.newsRatio))), terms(n.boostTerms), terms(n.muteTerms), n.goodExamples, n.badExamples, n.referenceCreators, JSON.stringify(n.links), n.youtubeChannelId, n.voiceSamples, nowIso(), id,
   );
   return getChannel(db, id);
 }
@@ -178,4 +179,4 @@ export function setFeedChannel(db: DB, channelId: string, feedId: string, on: bo
 }
 
 /** SQL fragment restricting clusters (alias c) to stories reported by this channel's feeds. Bind the channel id. */
-export const CHANNEL_CLUSTER_SQL = "c.id IN (SELECT a.cluster_id FROM articles a JOIN channel_feeds cf ON cf.feed_id = a.feed_id JOIN feeds rf ON rf.id = a.feed_id WHERE cf.channel_id = ? AND a.cluster_id IS NOT NULL AND COALESCE(rf.category, '') != 'reference')";
+export const CHANNEL_CLUSTER_SQL = "c.id IN (SELECT a.cluster_id FROM articles a JOIN channel_feeds cf ON cf.feed_id = a.feed_id JOIN feeds rf ON rf.id = a.feed_id WHERE cf.channel_id = ? AND a.cluster_id IS NOT NULL AND COALESCE(rf.category, '') NOT IN ('reference', 'talk'))";

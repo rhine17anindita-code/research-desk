@@ -4,7 +4,7 @@ export interface FeedSeed {
   siteUrl?: string;
   region: string;
   language?: string;
-  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic" | "culture" | "video" | "reference";
+  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic" | "culture" | "video" | "reference" | "talk";
   enabled?: boolean;
   /** Channels this feed belongs to by default (ids). Default: the news channel. */
   channels?: string[];
@@ -19,7 +19,7 @@ export interface FeedSeed {
  * Full article text is never scraped.
  */
 /** Bump when DEFAULT_FEEDS gains entries, so existing installations receive them once. */
-export const FEED_CATALOG_VERSION = 4;
+export const FEED_CATALOG_VERSION = 5;
 
 export function googleNewsTopicUrl(query: string): string {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -131,4 +131,44 @@ export const DEFAULT_FEEDS: FeedSeed[] = [
   { name: "PolyMatter", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCgNg3vwj3xt7QOrcIDaHdFg", siteUrl: "https://www.youtube.com/channel/UCgNg3vwj3xt7QOrcIDaHdFg", region: "Global", category: "reference" },
   { name: "Wendover Productions", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC9RM-iSvTu1uPJb8X5yp3EQ", siteUrl: "https://www.youtube.com/channel/UC9RM-iSvTu1uPJb8X5yp3EQ", region: "Global", category: "reference" },
   { name: "CaspianReport", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCwnKziETDbHJtx78nIkfYug", siteUrl: "https://www.youtube.com/channel/UCwnKziETDbHJtx78nIkfYug", region: "Global", category: "reference" },
+
+  // Talk shows & podcasts: what people are arguing about (kept out of the news feed, mined for ideas)
+  { name: "BBC News Bangla", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UChPD2BQ2dJ-w00klQQkc-Qg", siteUrl: "https://www.youtube.com/channel/UChPD2BQ2dJ-w00klQQkc-Qg", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "DW Bangla", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCIIkOzwZIdLfHa4Q13dQrkw", siteUrl: "https://www.youtube.com/channel/UCIIkOzwZIdLfHa4Q13dQrkw", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "DW Alap", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCumGF1yJ1ZMnpueabAyXqrw", siteUrl: "https://www.youtube.com/channel/UCumGF1yJ1ZMnpueabAyXqrw", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "VOA Bangla", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCzMeQSfaUSSuA4MgZ2wlT1Q", siteUrl: "https://www.youtube.com/channel/UCzMeQSfaUSSuA4MgZ2wlT1Q", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Zahed's Take", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCG_rdpyKuxsGIVoHpSWWuyA", siteUrl: "https://www.youtube.com/channel/UCG_rdpyKuxsGIVoHpSWWuyA", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Thikana (Khaled Muhiuddin)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCBovNpFWv8XT3WNG1fnmgyA", siteUrl: "https://www.youtube.com/channel/UCBovNpFWv8XT3WNG1fnmgyA", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Nagorik TV", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCu5_9xekpXOIlyqRHWqOd_Q", siteUrl: "https://www.youtube.com/channel/UCu5_9xekpXOIlyqRHWqOd_Q", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "ATN News Talk Show", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCf_N7CDJqP7wZGagydzjdMQ", siteUrl: "https://www.youtube.com/channel/UCf_N7CDJqP7wZGagydzjdMQ", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Netra News", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_DoG9dYBlfeN7Q-dsCMpQg", siteUrl: "https://www.youtube.com/channel/UC_DoG9dYBlfeN7Q-dsCMpQg", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Desh Rupantor", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCMbO-c2g92KPgOzYKDsTbug", siteUrl: "https://www.youtube.com/channel/UCMbO-c2g92KPgOzYKDsTbug", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Elias Hossain", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UClURnTgQiQpldGhtD4Fc7JQ", siteUrl: "https://www.youtube.com/channel/UClURnTgQiQpldGhtD4Fc7JQ", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Pinaki Bhattacharya", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUbtdbJRpaXiUI_IlBOvPpA", siteUrl: "https://www.youtube.com/channel/UCUbtdbJRpaXiUI_IlBOvPpA", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Kanak Sarwar", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCp7lwpevv1TrvO4kaKiYfRg", siteUrl: "https://www.youtube.com/channel/UCp7lwpevv1TrvO4kaKiYfRg", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Prothom Alo (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCeG7m5-AJ4I0H4EIleIty4Q", siteUrl: "https://www.youtube.com/channel/UCeG7m5-AJ4I0H4EIleIty4Q", region: "Bangladesh", language: "bn", category: "talk" },
+  { name: "Lex Fridman", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA", siteUrl: "https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA", region: "Global", language: "en", category: "talk" },
+  { name: "The Diary Of A CEO", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCGq-a57w-aPwyi3pW7XLiHw", siteUrl: "https://www.youtube.com/channel/UCGq-a57w-aPwyi3pW7XLiHw", region: "Global", language: "en", category: "talk" },
+  { name: "The Rest Is Politics", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCsufaClk5if2RGqABb-09Uw", siteUrl: "https://www.youtube.com/channel/UCsufaClk5if2RGqABb-09Uw", region: "Global", language: "en", category: "talk" },
+  { name: "The Rest Is History", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUYK0BJZF3yNb2fw1EdAXUQ", siteUrl: "https://www.youtube.com/channel/UCUYK0BJZF3yNb2fw1EdAXUQ", region: "Global", language: "en", category: "talk" },
+  { name: "Piers Morgan Uncensored", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCatt7TBjfBkiJWx8khav_Gg", siteUrl: "https://www.youtube.com/channel/UCatt7TBjfBkiJWx8khav_Gg", region: "Global", language: "en", category: "talk" },
+  { name: "Breaking Points", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCDRIjKy6eZOvKtOELtTdeUA", siteUrl: "https://www.youtube.com/channel/UCDRIjKy6eZOvKtOELtTdeUA", region: "Global", language: "en", category: "talk" },
+  { name: "All-In Podcast", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCESLZhusAkFfsNsApnjF_Cg", siteUrl: "https://www.youtube.com/channel/UCESLZhusAkFfsNsApnjF_Cg", region: "Global", language: "en", category: "talk" },
+  { name: "Chris Williamson (Modern Wisdom)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCIaH-gZIVC432YRjNVvnyCA", siteUrl: "https://www.youtube.com/channel/UCIaH-gZIVC432YRjNVvnyCA", region: "Global", language: "en", category: "talk" },
+  { name: "Triggernometry", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC7oPkqeHTwuOZ5CZ-R9f-6w", siteUrl: "https://www.youtube.com/channel/UC7oPkqeHTwuOZ5CZ-R9f-6w", region: "Global", language: "en", category: "talk" },
+  { name: "Dhruv Rathee", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC-CSyyi47VX1lD9zyeABW3w", siteUrl: "https://www.youtube.com/channel/UC-CSyyi47VX1lD9zyeABW3w", region: "Global", language: "en", category: "talk" },
+  { name: "BeerBiceps (The Ranveer Show)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCPxMZIFE856tbTfdkdjzTSQ", siteUrl: "https://www.youtube.com/channel/UCPxMZIFE856tbTfdkdjzTSQ", region: "Global", language: "en", category: "talk" },
+  { name: "Zeteo (Mehdi Hasan)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCVG72F2Q5yCmLQfctNK6M2A", siteUrl: "https://www.youtube.com/channel/UCVG72F2Q5yCmLQfctNK6M2A", region: "Global", language: "en", category: "talk" },
+  { name: "Channel 4 News", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCTrQ7HXWRRxr7OsOtodr2_w", siteUrl: "https://www.youtube.com/channel/UCTrQ7HXWRRxr7OsOtodr2_w", region: "Global", language: "en", category: "talk" },
+  { name: "Times Radio", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCF-VP3b3oH0XASqsLI5rnLw", siteUrl: "https://www.youtube.com/channel/UCF-VP3b3oH0XASqsLI5rnLw", region: "Global", language: "en", category: "talk" },
+  { name: "Firstpost (Vantage)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCz8QaiQxApLq8sLNcszYyJw", siteUrl: "https://www.youtube.com/channel/UCz8QaiQxApLq8sLNcszYyJw", region: "Global", language: "en", category: "talk" },
+  { name: "ThePrint", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCuyRsHZILrU7ZDIAbGASHdA", siteUrl: "https://www.youtube.com/channel/UCuyRsHZILrU7ZDIAbGASHdA", region: "Global", language: "en", category: "talk" },
+  { name: "The Joe Rogan Experience", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCzQUP1qoWDoEbmsQxvdjxgQ", siteUrl: "https://www.youtube.com/channel/UCzQUP1qoWDoEbmsQxvdjxgQ", region: "Global", language: "en", category: "talk" },
+  { name: "Tucker Carlson", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCGttrUON87gWfU6dMWm1fcA", siteUrl: "https://www.youtube.com/channel/UCGttrUON87gWfU6dMWm1fcA", region: "Global", language: "en", category: "talk" },
+  { name: "NYT Opinion", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCm1fqkJ-Tq64bQzM6VRMicQ", siteUrl: "https://www.youtube.com/channel/UCm1fqkJ-Tq64bQzM6VRMicQ", region: "Global", language: "en", category: "talk" },
+  { name: "The News Agents", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCVbgFf27--l2zYAneDEgyJA", siteUrl: "https://www.youtube.com/channel/UCVbgFf27--l2zYAneDEgyJA", region: "Global", language: "en", category: "talk" },
+  { name: "PBD Podcast", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCGX7nGXpz-CmO_Arg-cgJ7A", siteUrl: "https://www.youtube.com/channel/UCGX7nGXpz-CmO_Arg-cgJ7A", region: "Global", language: "en", category: "talk" },
+  { name: "Hasan Minhaj", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCarEovlrD9QY-fy-Z6apIDQ", siteUrl: "https://www.youtube.com/channel/UCarEovlrD9QY-fy-Z6apIDQ", region: "Global", language: "en", category: "talk" },
+  { name: "John Mearsheimer", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCEaoODAZJF5w20lzcX1v03w", siteUrl: "https://www.youtube.com/channel/UCEaoODAZJF5w20lzcX1v03w", region: "Global", language: "en", category: "talk" },
+  { name: "Glenn Diesen", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCZFCDIHTe9HGxtIuVDpBz7g", siteUrl: "https://www.youtube.com/channel/UCZFCDIHTe9HGxtIuVDpBz7g", region: "Global", language: "en", category: "talk" },
 ];

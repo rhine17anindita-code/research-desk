@@ -31,7 +31,7 @@ const VERBS: Record<string, number> = {
 
 const LOADED = /\b(war|kill|killed|death|dead|die|genocide|nuclear|bomb|illegal|corrupt\w*|lie|lies|liar|betray\w*|traitor|resign\w*|arrest\w*|ban|banned|sanction\w*|coup|terror\w*|crisis|collapse|revenge|destroy\w*|never|enemy|shame|disgrace|fraud|rigged|stolen|invade|invasion|crime|criminal|prison|jail|execute\w*|bankrupt\w*|threat|fire|fired|scandal|secret|cover-?up|conspiracy|regret|mistake|apolog\w*|racist|hate|extremist|weapon\w*|blood|famine|starv\w*)\b/gi;
 
-const SPORT = /\b(football|cricket|match|matches|coach|squad|wicket|innings|goal|goals|league|tournament|world cup|season|striker|batting|bowling|fixture|kick-off|referee|olympic|tennis|nba|nfl|fifa|uefa|ipl|test series|odi|t20|series|captain|batter|batsman|bowler|runs|wickets?|sixes|umpire|half-century|century|semi-?final|final whistle)\b/i;
+export const SPORT = /\b(football|cricket|match|matches|coach|squad|wicket|innings|goal|goals|league|tournament|world cup|season|striker|batting|bowling|fixture|kick-off|referee|olympic|tennis|nba|nfl|fifa|uefa|ipl|test series|odi|t20|series|captain|batter|batsman|bowler|runs|wickets?|sixes|umpire|half-century|century|semi-?final|final whistle)\b/i;
 
 const NOT_PEOPLE = new Set([
   "Reuters", "AP", "AFP", "BBC", "CNN", "Agence France-Presse", "Associated Press", "Al Jazeera", "Bloomberg", "Xinhua", "PTI", "ANI", "UNB", "BSS", "Dawn", "The Hindu",

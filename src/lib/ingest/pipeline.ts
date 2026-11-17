@@ -79,7 +79,10 @@ function fingerprint(a: ArticleRow): ArticleFingerprint {
 /** Assign every unclustered article to an existing or new cluster, then refresh cluster metadata. */
 export function clusterPending(db: DB): { clustersNew: number; touched: string[] } {
   const pending = db
-    .prepare("SELECT * FROM articles WHERE cluster_id IS NULL ORDER BY COALESCE(published_at, fetched_at) ASC")
+    // Creator and talk-show videos are commentary, not reporting: they never join or form news stories.
+    .prepare(
+      "SELECT * FROM articles WHERE cluster_id IS NULL AND feed_id NOT IN (SELECT id FROM feeds WHERE category IN ('reference', 'talk')) ORDER BY COALESCE(published_at, fetched_at) ASC",
+    )
     .all() as ArticleRow[];
   if (!pending.length) return { clustersNew: 0, touched: [] };
 

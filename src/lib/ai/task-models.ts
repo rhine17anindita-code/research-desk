@@ -14,6 +14,7 @@ export interface TaskGroup {
 export const TASK_GROUPS: TaskGroup[] = [
   { id: "ideas", label: "Content ideas", hint: "Idea batches and daily ideas", prefixes: ["ideas."], defaultModel: "claude-opus-5-5" },
   { id: "writing", label: "Scripts, outlines, pitches & proposals", hint: "Expanding your ideas, angles, outlines, proposals", prefixes: ["creator.", "pitch.", "script."], defaultModel: "claude-opus-5-5" },
+  { id: "packaging", label: "Shot lists, thumbnails, cut-downs & captions", hint: "Packaging a finished script", prefixes: ["package."], defaultModel: "claude-sonnet-5-5" },
   { id: "deep", label: "Deep research", hint: "Multi-source research briefs", prefixes: ["deep."], defaultModel: "claude-opus-5-5" },
   { id: "answers", label: "Research questions & answers", hint: "Generating questions, quick and explored answers", prefixes: ["questions.", "answers."], defaultModel: "claude-sonnet-5-5" },
   { id: "assistant", label: "Assistant chat", hint: "Conversations on stories, questions and projects", prefixes: ["assistant."], defaultModel: "claude-sonnet-5-5" },

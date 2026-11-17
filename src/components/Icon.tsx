@@ -6,6 +6,7 @@ const PATHS: Record<string, string> = {
   library: "M5 4h3v16H5zM10 4h3v16h-3zM15.5 4.5l2.9-.8 4 15.4-2.9.8z",
   search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4.2-4.2",
   settings: "M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4",
+  calendar: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4",
   bookmark: "M6 4h12v17l-6-4-6 4V4Z",
   x: "M6 6l12 12M18 6 6 18",
   up: "M7 14l5-5 5 5",

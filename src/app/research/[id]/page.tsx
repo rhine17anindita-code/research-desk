@@ -9,6 +9,8 @@ import { getSetting } from "@/lib/repo/settings";
 import { DeleteProject, ProjectField, ProjectQuestions, ProjectSide, RemoveItem, StageSelect } from "@/components/ProjectComponents";
 import { NotesPanel } from "@/components/research/NotesPanel";
 import { CreatorPanel } from "@/components/CreatorPanel";
+import { ProductionPanel } from "@/components/ProductionPanel";
+import { getProduction } from "@/lib/production";
 import { Icon } from "@/components/Icon";
 import { TrackVisit } from "@/components/CommandPalette";
 import { timeAgo } from "@/lib/format";
@@ -51,6 +53,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             </div>
             <ProjectField id={id} field="thesis" value={project.thesis} label="Research question / thesis" placeholder="What are you trying to establish?" />
           </header>
+
+          <ProductionPanel initial={getProduction(db, id)!} />
 
           <section>
             <div className="eyebrow mb-2">Stories</div>

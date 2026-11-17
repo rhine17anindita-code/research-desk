@@ -486,4 +486,28 @@ UPDATE channels SET
 WHERE id = 'ch_default';
 `,
   },
+  {
+    id: 6,
+    name: "production",
+    sql: `
+-- Projects become content items: what kind of piece, where it is in production, when it goes out,
+-- and its working documents (script, shot list, thumbnail, cut-downs, captions).
+ALTER TABLE projects ADD COLUMN content_type TEXT NOT NULL DEFAULT 'video';     -- video | short | series | podcast | interview | sponsored | carousel | article
+ALTER TABLE projects ADD COLUMN production_stage TEXT NOT NULL DEFAULT 'idea'; -- idea | research | script | record | edit | publish | live
+ALTER TABLE projects ADD COLUMN publish_date TEXT;                             -- YYYY-MM-DD
+ALTER TABLE projects ADD COLUMN platforms TEXT NOT NULL DEFAULT '[]';           -- JSON ["youtube","instagram",…]
+ALTER TABLE projects ADD COLUMN series_name TEXT;
+ALTER TABLE projects ADD COLUMN guest TEXT;
+ALTER TABLE projects ADD COLUMN sponsor TEXT;
+ALTER TABLE projects ADD COLUMN published_url TEXT;
+ALTER TABLE projects ADD COLUMN production TEXT NOT NULL DEFAULT '{}';          -- JSON {script, shots, thumbnail, cutdowns, captions}
+CREATE INDEX idx_projects_publish ON projects(publish_date);
+
+-- Old scripts pasted by the creator, so drafts sound like them.
+ALTER TABLE channels ADD COLUMN voice_samples TEXT NOT NULL DEFAULT '';
+
+-- Fresh AI ideas twice a day for the main channel (budgets still apply; switch off in Settings → Channels).
+UPDATE channels SET daily_ideas = 1 WHERE id = 'ch_default';
+`,
+  },
 ];

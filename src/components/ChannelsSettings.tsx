@@ -20,6 +20,7 @@ function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; fee
   const [f, setF] = useState({
     name: ch.name, description: ch.description ?? "", profile: ch.profile, geo: ch.geo, dailyIdeas: ch.dailyIdeas, color: ch.color, newsRatio: ch.newsRatio,
     boostTerms: ch.boostTerms.join(", "), muteTerms: ch.muteTerms.join(", "), goodExamples: ch.goodExamples, badExamples: ch.badExamples, referenceCreators: ch.referenceCreators,
+    voiceSamples: ch.voiceSamples,
     links: { youtube: ch.links.youtube ?? "", instagram: ch.links.instagram ?? "", facebook: ch.links.facebook ?? "", tiktok: ch.links.tiktok ?? "" },
   });
   const [inChannel, setIn] = useState(new Set(members));
@@ -91,6 +92,10 @@ function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; fee
         <div>
           <label className="label">Creators whose style to aim for</label>
           <input className="input text-[12.5px]" value={f.referenceCreators} onChange={(e) => setF({ ...f, referenceCreators: e.target.value })} />
+        </div>
+        <div className="md:col-span-2">
+          <label className="label">Your voice — paste 2–3 of your old scripts</label>
+          <textarea className="input min-h-[110px] text-[12.5px]" value={f.voiceSamples} onChange={(e) => setF({ ...f, voiceSamples: e.target.value })} placeholder="Scripts are drafted to sound like these: your openings, rhythm, humour, the words you use." />
         </div>
         <div className="md:col-span-2">
           <label className="label">Your accounts on this channel</label>

@@ -12,10 +12,14 @@ import { GeneratePanel } from "@/components/ideas/GeneratePanel";
 import { Composer } from "@/components/studio/Composer";
 import { Pipeline } from "@/components/studio/Pipeline";
 import { DailyTrigger } from "@/components/studio/DailyTrigger";
-import { CreatorsSection, YourChannelSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
+import { CreatorsSection, TalkSection, YourChannelSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
 import { referenceVideos } from "@/lib/ideation/creators";
 import { youtubeConfigured } from "@/lib/media";
 import { ownYoutube } from "@/lib/ideation/own";
+import { talkEpisodes } from "@/lib/ideation/talk";
+import { topUpEvergreen } from "@/lib/ideation/evergreen";
+import { storiesToBuild } from "@/lib/ideation/build-stories";
+import { AutoRefresh, StoriesToBuild } from "@/components/studio/StoriesToBuild";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +33,14 @@ export default async function StudioPage() {
   const ch = activeChannel(db);
   const score = (i: { packaging: { scores: { hook: number; massAppeal: number; novelty: number } } | null }) =>
     i.packaging ? i.packaging.scores.hook + i.packaging.scores.massAppeal + i.packaging.scores.novelty : 0;
+  topUpEvergreen(db); // free evergreen ideas, so the grid is never empty
+  const lastIngest = (db.prepare("SELECT MAX(started_at) AS t FROM ingest_runs").get() as { t: string | null }).t;
+  const stale = !lastIngest || Date.now() - Date.parse(lastIngest) > 60 * 60_000;
   const deck = listIdeas(db, { status: "new", limit: 60 }).sort((a, b) => score(b) - score(a));
   const backing = backingFor(db, deck);
   const pulse = cachedPulse(db, ch.geo);
-  const today = new Date().toISOString().slice(0, 10);
-  const needsDaily = ch.dailyIdeas && ch.lastDailyAt?.slice(0, 10) !== today && getAiStatus(db).available;
+  // Fresh AI ideas twice a day (only when switched on for this channel; budgets still apply).
+  const needsDaily = ch.dailyIdeas && (!ch.lastDailyAt || Date.now() - Date.parse(ch.lastDailyAt) > 12 * 3_600_000) && getAiStatus(db).available;
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
@@ -54,6 +61,7 @@ export default async function StudioPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-6">
           <Composer />
+          {stale && <AutoRefresh />}
           {needsDaily && <DailyTrigger />}
 
           <section>
@@ -74,6 +82,8 @@ export default async function StudioPage() {
             <div className="mt-4"><GeneratePanel compact /></div>
           </section>
 
+          <StoriesToBuild stories={storiesToBuild(db, 6)} />
+
           <Pipeline
             mine={listIdeas(db, { origin: "user", status: ["saved", "developing", "made", "new"], limit: 50 })}
             saved={listIdeas(db, { status: "saved", limit: 50 }).filter((i) => i.origin === "ai")}
@@ -86,6 +96,7 @@ export default async function StudioPage() {
           <YourChannelSection yt={await ownYoutube(db)} links={ch.links} />
           <StatementsSection statements={findStatements(db, { limit: 10 })} />
           <UntoldSection opps={findOpportunities(db, { limit: 8 })} />
+          <TalkSection bn={await talkEpisodes(db, { language: "bn", limit: 8 })} en={await talkEpisodes(db, { language: "en", limit: 8 })} />
           <CreatorsSection videos={await referenceVideos(db, 8)} hasKey={youtubeConfigured()} />
           <PulseSection trends={pulse?.trends ?? []} mostRead={pulse?.mostRead ?? []} onThisDay={pulse?.onThisDay ?? []} geo={ch.geo} />
           <InspirationSection items={listInspirations(db, 10)} />

@@ -12,6 +12,45 @@ import type { Opportunity } from "@/lib/ideation/opportunities";
 import type { Inspiration } from "@/lib/ideation/repo";
 import type { CreatorVideo } from "@/lib/ideation/creators";
 import type { OwnChannel } from "@/lib/media";
+import type { TalkEpisode } from "@/lib/ideation/talk";
+
+/** Talk shows & podcasts: what hosts and guests are arguing about, as raw material for ideas. */
+export function TalkSection({ bn, en, full }: { bn: TalkEpisode[]; en: TalkEpisode[]; full?: boolean }) {
+  const [tab, setTab] = useState<"bn" | "en">(bn.length ? "bn" : "en");
+  const list = (tab === "bn" ? bn : en).slice(0, full ? 30 : 5);
+  return (
+    <Section
+      title="Talk shows & podcasts"
+      hint="Claims, insider details and arguments from Bangladeshi and international shows — ideas to check, explain or challenge."
+      more={full ? undefined : { href: "/ideas/talk", label: "All" }}
+    >
+      <div className="mb-2 flex gap-1">
+        <button className={tab === "bn" ? "chip-accent" : "chip"} onClick={() => setTab("bn")}>Bangladesh ({bn.length})</button>
+        <button className={tab === "en" ? "chip-accent" : "chip"} onClick={() => setTab("en")}>International ({en.length})</button>
+      </div>
+      <ul className={full ? "grid gap-x-6 md:grid-cols-2" : ""}>
+        {list.map((e) => (
+          <Expandable key={e.articleId} label="Ideas from this episode" payload={{ talkIds: [e.articleId] }}>
+            <a href={e.url} target="_blank" rel="noreferrer" className="flex gap-2.5">
+              {e.thumbnail && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={e.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-[52px] w-[92px] shrink-0 rounded-lg bg-surface-2 object-cover" />
+              )}
+              <span className="min-w-0">
+                <span className="line-clamp-2 text-[13px] font-medium leading-snug text-ink hover:underline">{e.title}</span>
+                <span className="mt-0.5 block text-[11.5px] text-muted">
+                  {e.show}{e.publishedAt ? ` · ${timeAgo(e.publishedAt)}` : ""}{e.views != null ? ` · ${compact(e.views)} views` : ""}{e.short ? " · clip" : ""}
+                </span>
+              </span>
+            </a>
+            {e.reasons.length > 0 && <div className="mt-1 text-[11.5px] leading-snug text-accent">{e.reasons.slice(0, 2).join(" · ")}</div>}
+          </Expandable>
+        ))}
+        {!list.length && <li className="text-[12.5px] text-muted">No episodes yet — refresh feeds to pull the latest shows.</li>}
+      </ul>
+    </Section>
+  );
+}
 import type { ChannelLinks } from "@/lib/channels";
 
 /** The creator's own channel at a glance: totals, latest uploads, and how each did against the usual. */
