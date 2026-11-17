@@ -34,6 +34,8 @@ export interface ProductionDocs {
   dials?: string;
   /** Monetisation picks for this project (JSON). */
   monetise?: string;
+  /** YouTube: which channel it's for, which format, and the 48-hour review (JSON). */
+  yt_channel?: string; yt_format?: string; yt_review?: string;
 }
 export const DOC_KEYS = ["script", "shots", "thumbnail", "cutdowns", "captions"] as const;
 

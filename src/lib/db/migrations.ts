@@ -788,4 +788,27 @@ CREATE TABLE mon_proposals (
 ALTER TABLE channels ADD COLUMN monetise TEXT NOT NULL DEFAULT '{}';
 `,
   },
+  {
+    id: 19,
+    name: "youtube-studio",
+    sql: `
+-- YouTube channels being built (each can draw on one of the Desk's channels for news, ideas and voice).
+CREATE TABLE yt_channels (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, handle TEXT NOT NULL DEFAULT '', niche TEXT NOT NULL DEFAULT '', desk_channel_id TEXT, youtube_id TEXT,
+  status TEXT NOT NULL DEFAULT 'planned',  -- active | launching | planned | later
+  priority INTEGER NOT NULL DEFAULT 5, positioning TEXT NOT NULL DEFAULT '', audience TEXT NOT NULL DEFAULT '', pillars TEXT NOT NULL DEFAULT '[]',
+  formats TEXT NOT NULL DEFAULT '[]', cadence TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', watch_hours REAL,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+-- Competitors per YouTube channel, and their recent videos (from the YouTube API).
+CREATE TABLE yt_competitors (
+  id TEXT PRIMARY KEY, yt_channel_id TEXT NOT NULL, youtube_id TEXT NOT NULL, name TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', fetched_at TEXT, created_at TEXT NOT NULL
+);
+CREATE TABLE yt_comp_videos (
+  video_id TEXT PRIMARY KEY, competitor_id TEXT NOT NULL, title TEXT NOT NULL, published_at TEXT, views INTEGER, comments INTEGER, seconds INTEGER, thumbnail TEXT, fetched_at TEXT NOT NULL
+);
+-- Ticked checklist items (set-up, channel launch, per-project workflow).
+CREATE TABLE yt_checks (scope TEXT NOT NULL, key TEXT NOT NULL, done_at TEXT NOT NULL, PRIMARY KEY (scope, key));
+`,
+  },
 ];

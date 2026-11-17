@@ -22,6 +22,7 @@ const NAV: { section: string; items: { href: string; label: string; icon: string
     { href: "/search", label: "Search", icon: "search" },
   ] },
   { section: "Make", items: [
+    { href: "/youtube", label: "YouTube", icon: "spark" },
     { href: "/voice", label: "Voice Lab", icon: "edit" },
     { href: "/calendar", label: "Calendar", icon: "calendar" },
   ] },

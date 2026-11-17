@@ -8,6 +8,7 @@ import { truncate } from "./text";
 import { performanceBrief } from "./performance/patterns";
 import { bannedHits, getProfile, styleBlock } from "./voice";
 import { deepenSourceList } from "./research/deepen";
+import { FORMATS } from "./youtube/guide";
 
 /**
  * Script writing, step by step, in the creator's voice (from Voice Lab):
@@ -47,8 +48,10 @@ const projectDials = (p: Production) => {
 };
 
 function itemBlock(p: Production): string {
+  const yf = p.docs.yt_format ? FORMATS.find((f) => f.id === p.docs.yt_format) : undefined;
   return [
     `CONTENT TYPE: ${TYPE_BY_ID[p.contentType]?.label ?? p.contentType}. ${SHAPE[p.contentType] ?? SHAPE.video}`,
+    yf ? `YOUTUBE FORMAT: ${yf.name} (${yf.length}). ${yf.what}\nFOLLOW THIS STRUCTURE:\n${yf.structure.map((x) => `- ${x}`).join("\n")}` : "",
     p.seriesName ? `SERIES: ${p.seriesName}` : "",
     p.guest ? `GUEST: ${p.guest}` : "",
     p.sponsor ? `SPONSOR: ${p.sponsor}` : "",

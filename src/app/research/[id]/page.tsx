@@ -12,6 +12,7 @@ import { CreatorPanel } from "@/components/CreatorPanel";
 import { ProductionPanel } from "@/components/ProductionPanel";
 import { getProfile } from "@/lib/voice";
 import { ProjectMonetise } from "@/components/monetise/ProjectMonetise";
+import { ProjectYoutube } from "@/components/youtube/ProjectYoutube";
 import { getProduction } from "@/lib/production";
 import { Icon } from "@/components/Icon";
 import { TrackVisit } from "@/components/CommandPalette";
@@ -57,6 +58,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </header>
 
           <ProductionPanel initial={getProduction(db, id)!} presets={getProfile(db).presets.map((x) => x.name)} voice={{ dials: getProfile(db).dials, presets: getProfile(db).presets }} />
+          <ProjectYoutube projectId={id} />
           <ProjectMonetise projectId={id} />
 
           <section>
