@@ -617,4 +617,29 @@ CREATE TABLE own_reports (
 ALTER TABLE channels ADD COLUMN meta_page_id TEXT;
 `,
   },
+  {
+    id: 10,
+    name: "rhine-reviews-channel",
+    sql: `
+-- The culture channel is the Rhine Reviews persona: its accounts, name and Meta Page.
+UPDATE channels SET
+  name = 'Rhine Reviews',
+  links = '{"instagram":"https://www.instagram.com/rhinereviews","facebook":"https://www.facebook.com/321015124985241"}',
+  meta_page_id = '321015124985241'
+WHERE id = 'ch_culture';
+
+-- A separate "Rhine Reviews" channel made before the merge: move its numbers over, then remove it.
+UPDATE own_posts SET channel_id = 'ch_culture' WHERE channel_id IN (SELECT id FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+UPDATE OR IGNORE own_daily SET channel_id = 'ch_culture' WHERE channel_id IN (SELECT id FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+DELETE FROM own_daily WHERE channel_id IN (SELECT id FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+UPDATE own_comments SET channel_id = 'ch_culture' WHERE channel_id IN (SELECT id FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+UPDATE ideas SET channel_id = 'ch_culture' WHERE channel_id IN (SELECT id FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+UPDATE settings SET value = '"ch_default"' WHERE key = 'channel.active' AND value IN (SELECT '"' || id || '"' FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+DELETE FROM channel_feeds WHERE channel_id IN (SELECT id FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture');
+DELETE FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture';
+
+-- The main channel's Facebook Page (Anindita H. Rhine, with @anindita.rhine linked).
+UPDATE channels SET meta_page_id = '1027427880451032' WHERE id = 'ch_default' AND meta_page_id IS NULL;
+`,
+  },
 ];

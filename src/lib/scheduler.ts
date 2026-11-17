@@ -1,18 +1,19 @@
 import { getDb } from "./db";
 import { ingestFeeds } from "./ingest/pipeline";
-import { getSetting } from "./repo/settings";
 
 const g = globalThis as unknown as { __ingestTimer?: NodeJS.Timeout };
 
 /** Minutes between automatic checks: the env var wins when set ≥5, else Settings (default 15; 0 = off). */
 export function ingestIntervalMinutes(): number {
-  const env = Number(process.env.INGEST_INTERVAL_MINUTES ?? 0);
-  if (env >= 5) return env;
+  // Your choice in the Studio wins; the INGEST_INTERVAL_MINUTES env var is only the starting value.
   try {
-    return Math.max(0, Number(getSetting(getDb(), "ingest.interval_minutes")) || 0);
+    const row = getDb().prepare("SELECT value FROM settings WHERE key = 'ingest.interval_minutes'").get() as { value: string } | undefined;
+    if (row) return Math.max(0, Number(JSON.parse(row.value)) || 0);
   } catch {
-    return 15;
+    /* fall through */
   }
+  const env = Number(process.env.INGEST_INTERVAL_MINUTES ?? 0);
+  return env >= 5 ? env : 15;
 }
 
 /**

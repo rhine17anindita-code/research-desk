@@ -133,3 +133,15 @@ describe("direct Meta connection", () => {
     expect(listDaily(db, "instagram", 5)[0].followers).toBe(77);
   });
 });
+
+describe("Rhine Reviews merge", () => {
+  it("makes the culture channel Rhine Reviews with its accounts, and gives the main channel its Page", () => {
+    const db = freshDb();
+    const rr = db.prepare("SELECT name, meta_page_id, links FROM channels WHERE id = 'ch_culture'").get() as { name: string; meta_page_id: string; links: string };
+    expect(rr.name).toBe("Rhine Reviews");
+    expect(rr.meta_page_id).toBe("321015124985241");
+    expect(JSON.parse(rr.links).instagram).toContain("rhinereviews");
+    expect((db.prepare("SELECT meta_page_id FROM channels WHERE id = 'ch_default'").get() as { meta_page_id: string }).meta_page_id).toBe("1027427880451032");
+    expect((db.prepare("SELECT COUNT(*) AS n FROM channels WHERE name = 'Rhine Reviews'").get() as { n: number }).n).toBe(1);
+  });
+});

@@ -20,7 +20,9 @@ Add these under **Environment Variables** before deploying:
 | Name | Value | |
 |---|---|---|
 | `SITE_PASSWORD` | a long password you choose | **Required.** Without it the site stays locked. Share it only with people who should have full access. |
-| `INGEST_INTERVAL_MINUTES` | `60` | Refreshes feeds every hour while the app runs. |
+| `INGEST_INTERVAL_MINUTES` | `15` | Optional starting value for automatic feed checks; change it any time from the Studio (that choice wins). |
+| `YOUTUBE_API_KEY` | your key | Your own YouTube numbers and comments, talk-show views, reference creators. |
+| `META_ACCESS_TOKEN` | your Meta token | Instagram & Facebook numbers for every channel. Lasts ~60 days; the Performance page warns before it expires. |
 | `ANTHROPIC_API_KEY` | your key | Optional; enables AI features. Budgets in Settings still apply. |
 | `SESSION_SECRET` | another long random string | Optional; changing it signs everyone out. |
 | `DATABASE_PATH` | leave empty | Optional. By default the app stores its database at `~/research-desk-data/research-desk.db`, outside the folder Hostinger replaces on every deploy, so your research survives updates. |
