@@ -58,6 +58,10 @@ async function tick() {
       const { fetchFullText } = await import("./ingest/fulltext");
       const ft = await fetchFullText(db, 120).catch(() => null);
       if (ft) console.log(`[scheduler] full text: ${ft.full} full, ${ft.summary} summary, ${ft.headline} headline-only, ${ft.blocked} for the helper`);
+      // Transcripts, video-to-text and free headline translation — done here, no laptop needed.
+      const { runCloudJobs } = await import("./cloud-jobs");
+      const cj = await runCloudJobs(db).catch((e) => { console.error("[cloud]", (e as Error).message); return null; });
+      if (cj) console.log(`[scheduler] cloud: ${cj.transcripts} transcripts, ${cj.media} videos, ${cj.translated} headlines translated`);
       // The creator's own YouTube numbers and comments, every 6 hours.
       const { syncYoutubeIfStale } = await import("./performance/youtube-sync");
       await syncYoutubeIfStale(db, 6);

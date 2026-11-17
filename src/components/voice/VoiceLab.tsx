@@ -44,7 +44,7 @@ export function VoiceLab({ channel, profile: initial, sources }: { channel: stri
       </div>
       {waiting > 0 && (
         <p className="rounded-xl bg-accent-soft px-3 py-2 text-[12.5px] text-ink-2">
-          {waiting} video{waiting === 1 ? " is" : "s are"} waiting to be transcribed. Your Mac helper does this for free every 10 minutes while your Mac is on (a long video can take a few minutes).
+          {waiting} video{waiting === 1 ? " is" : "s are"} waiting to be transcribed. The server does this every 10 minutes through the transcript service (Settings → Connections); a long video can take a few minutes.
         </p>
       )}
 
@@ -158,7 +158,7 @@ function SourceBox({ kind, title, hint, items, onChange }: { kind: "mine" | "ins
             <div className="min-w-0 flex-1">
               <div className="line-clamp-1 text-ink">{s.title}{s.creator ? <span className="text-muted"> — {s.creator}</span> : null}</div>
               <div className="text-[11px] text-muted">
-                {s.status === "queued" ? "Waiting for your Mac helper to transcribe…" : s.status === "failed" ? <span className="text-bad">{s.error ?? "Couldn't transcribe"}</span> : `${Math.round(s.chars / 100) / 10}K characters`}
+                {s.status === "queued" ? "Waiting to be transcribed (within ~10 min)…" : s.status === "failed" ? <span className="text-bad">{s.error ?? "Couldn't transcribe"}</span> : `${Math.round(s.chars / 100) / 10}K characters`}
               </div>
             </div>
             <button className="btn-ghost !px-1 !text-muted" title="Remove" onClick={async () => { await api("/api/voice/sources", "DELETE", { id: s.id }); onChange(); }}><Icon name="x" size={12} /></button>

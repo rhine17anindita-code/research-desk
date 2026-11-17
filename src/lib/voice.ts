@@ -100,6 +100,8 @@ export async function addVoiceSource(db: DB, input: { kind: "mine" | "inspiratio
   db.prepare(
     `INSERT INTO voice_sources (id, channel_id, kind, title, url, platform, creator, text, status, error, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(id, channelId, input.kind, truncate(input.title?.trim() || (text ? text.split("\n").find((l) => l.trim()) ?? "Script" : url!), 200), url, platform, input.creator?.trim() || null, body, status, error, now, now);
+  // Waiting for its words: let the server's transcript service pick it up now rather than at the next run.
+  if (status === "queued") void import("./cloud-jobs").then((m) => m.runCloudJobs(db)).catch(() => null);
   return mapSrc(db.prepare("SELECT * FROM voice_sources WHERE id = ?").get(id) as SrcRow);
 }
 

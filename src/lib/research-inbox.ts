@@ -135,7 +135,7 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
         } catch (e) {
           if (!BOT_BLOCK.test((e as Error).message)) throw e;
           queueTranscript(db, vid, null);
-          error = "The transcript is on its way from your Mac helper (within about 10 minutes while your Mac is on).";
+          error = "The transcript is on its way (usually within 10 minutes).";
         }
       } else if (["article", "paper"].includes(detectKind(url))) {
         const html = await getText(url, "text/html", 3_000_000);
@@ -150,7 +150,7 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
       status = "thin";
       if (["instagram", "tiktok"].includes(detectKind(url)) || /facebook\.com\/(reel|watch|share\/r|.*\/videos\/)|fb\.watch/.test(url)) {
         mediaQueued = true;
-        error = "The video's words are on their way: your Mac helper transcribes it (within about 10 minutes while your Mac is on).";
+        error = "The video's words are on their way (usually within 10 minutes).";
       }
       error ||= ["instagram", "tiktok", "x"].includes(detectKind(url))
         ? "Social posts can't be read automatically — paste the text or add a screenshot."
@@ -181,6 +181,7 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
     JSON.stringify(relatedStories(db, [title, note, body?.slice(0, 3000)].filter(Boolean).join(" "))), now, now,
   );
   if (mediaQueued) db.prepare("UPDATE research_items SET media_status = 'queued' WHERE id = ?").run(id);
+  if (mediaQueued || error?.includes("on its way")) void import("./cloud-jobs").then((m) => m.runCloudJobs(db)).catch(() => null);
   return getResearch(db, id)!;
 }
 

@@ -20,6 +20,10 @@ export interface AppSettings {
   "discover.window_hours": number;
   /** How fast the creator speaks on camera (words per minute), measured in the read-time tracker. */
   "voice.wpm": number;
+  /** Transcript service (Supadata): most requests to make per month (its free plan is 100). */
+  "transcripts.monthly_cap": number;
+  /** Free headline translation used today ("YYYY-MM-DD:chars"). */
+  "translate.free_used": string;
   "discover.region_weights": Record<string, number>;
   "pipeline.stages": PipelineStage[];
   "retrieval.providers": { openalex: boolean; crossref: boolean; wikipedia: boolean; gdelt: boolean };
@@ -57,6 +61,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "budget.per_task_usd": 0.5,
   "discover.window_hours": 96,
   "voice.wpm": 150,
+  "transcripts.monthly_cap": 95,
+  "translate.free_used": "",
   "discover.region_weights": {},
   "pipeline.stages": [
     { id: "discovered", label: "Discovered" },

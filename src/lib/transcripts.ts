@@ -125,7 +125,21 @@ export async function transcriptFor(db: DB, articleId: string): Promise<Transcri
   if (!a || !vid) return null;
   const cached = cachedTranscript(db, vid);
   if (cached && (cached.status === "ok" || cached.status === "queued" || Date.now() - Date.parse(cached.fetchedAt) < 6 * 3_600_000)) return cached;
+  // YouTube blocks most hosting companies: use the transcript service when it's connected.
+  const viaService = async () => {
+    const { supadataTranscript, transcriptServiceReady } = await import("./cloud-jobs");
+    if (!transcriptServiceReady(db)) return false;
+    try {
+      const lang = (db.prepare("SELECT COALESCE(a.language, f.language, 'en') AS l FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.id = ?").get(articleId) as { l: string } | undefined)?.l ?? "en";
+      const t = await supadataTranscript(db, `https://www.youtube.com/watch?v=${vid}`, { lang: lang.slice(0, 2), mode: "native" });
+      storeTranscript(db, vid, articleId, t ? { status: "ok", language: t.language, kind: "asr", segments: t.segments } : { status: "none" });
+    } catch (e) {
+      storeTranscript(db, vid, articleId, { status: "error", error: (e as Error).message.slice(0, 300) });
+    }
+    return true;
+  };
   if (blockedRecently(db)) {
+    if (await viaService()) return cachedTranscript(db, vid);
     queueTranscript(db, vid, articleId);
     return cachedTranscript(db, vid);
   }
@@ -137,7 +151,7 @@ export async function transcriptFor(db: DB, articleId: string): Promise<Transcri
     const msg = (e as Error).message;
     if (BOT_BLOCK.test(msg)) {
       setSetting(db, "transcripts.blocked_at", nowIso());
-      storeTranscript(db, vid, articleId, { status: "queued" });
+      if (!(await viaService())) storeTranscript(db, vid, articleId, { status: "queued" });
     } else storeTranscript(db, vid, articleId, { status: "error", error: msg.slice(0, 300) });
   }
   return cachedTranscript(db, vid);

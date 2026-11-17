@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { ConnectionsSettings } from "@/components/ConnectionsSettings";
+import { supadataUsage } from "@/lib/cloud-jobs";
+import { secretSource } from "@/lib/secrets";
 import { getDb, parseJson, resolveDbPath } from "@/lib/db";
 import { getAllSettings } from "@/lib/repo/settings";
 import { getAiStatus } from "@/lib/ai/service";
@@ -21,6 +24,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     ["sources", "Sources"],
     ["personalisation", "Personalisation"],
     ["ai", "AI & usage"],
+    ["connections", "Connections"],
     ["pipeline", "Pipeline"],
   ];
 
@@ -65,6 +69,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           taskGroups={TASK_GROUPS.map((g) => ({ id: g.id, label: g.label, hint: g.hint, defaultModel: g.defaultModel }))}
         />
       )}
+      {tab === "connections" && (() => {
+        const u = supadataUsage(db);
+        return <ConnectionsSettings transcript={{ source: secretSource("SUPADATA_API_KEY", db), used: u.n, cap: u.cap }} />;
+      })()}
       {tab === "channels" && (
         <ChannelsSettings
           channels={listChannels(db)}

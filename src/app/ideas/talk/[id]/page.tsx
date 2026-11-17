@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TranslateNow } from "@/components/TranslateNow";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getArticle } from "@/lib/repo/stories";
@@ -57,7 +58,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
 
       {t?.status === "queued" ? (
         <div className="card px-4 py-4 text-[13px] text-muted">
-          The transcript is on its way: your Mac helper fetches it from your home internet (YouTube blocks hosting servers) and it appears here within about 10 minutes while your Mac is on. Refresh this page then.
+          The transcript is on its way and appears here within about 10 minutes — refresh the page then. (If it never comes, connect the transcript service in Settings → Connections.)
         </div>
       ) : !ok ? (
         <div className="card px-4 py-4 text-[13px] text-muted">
@@ -65,7 +66,12 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         </div>
       ) : (
         <>
-          {bangla && <div className="flex justify-end"><EnglishSwitch pending={!en} /></div>}
+          {bangla && (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {!en && <TranslateNow kind="transcript" id={t!.videoId} />}
+              <EnglishSwitch pending={false} />
+            </div>
+          )}
           <EpisodeMoments articleId={id} moments={moments.map((m) => ({ ...m, en: enAt(m.start) }))} />
           <MineEpisode articleId={id} mined={mined} ideas={ideas} backing={backingFor(db, ideas)} />
           <details className="card px-4 py-3">

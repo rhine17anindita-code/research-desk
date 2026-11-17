@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * English translations of Bangla content (made free on your Mac). One switch for the whole app,
+ * English translations of Bangla content (headlines translated free on the server). One switch for the whole app,
  * remembered on this device; on by default.
  */
 const KEY = "rd.english";
@@ -32,10 +32,10 @@ export function EnglishSwitch({ pending }: { pending?: boolean }) {
   const [on, set] = useShowEnglish();
   return (
     <span className="inline-flex items-center gap-1.5 text-[11.5px]">
-      <button className={on ? "chip-accent" : "chip"} onClick={() => set(!on)} title="Show English translations of Bangla text (free, made on your Mac)">
+      <button className={on ? "chip-accent" : "chip"} onClick={() => set(!on)} title="Show English translations of Bangla text">
         English {on ? "on" : "off"}
       </button>
-      {pending && on && <span className="text-muted">translation on its way from your Mac…</span>}
+      {pending && on && <span className="text-muted">translation coming…</span>}
     </span>
   );
 }

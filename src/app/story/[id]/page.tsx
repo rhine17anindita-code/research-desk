@@ -31,7 +31,7 @@ const TEXT_LABEL: Record<string, [string, string]> = {
   full: ["full article", "bg-ok-soft text-ok"],
   summary: ["short page (video, live update or paywall)", "bg-warn-soft text-warn"],
   headline: ["headline only", "bg-surface-2 text-muted"],
-  blocked: ["fetching from your Mac…", "bg-accent-soft text-accent"],
+  blocked: ["summary (site refuses servers)", "bg-surface-2 text-muted"],
   paywalled: ["paywalled · recommended read", "bg-ai-soft text-ai"],
 };
 

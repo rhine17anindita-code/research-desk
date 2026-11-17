@@ -13,7 +13,7 @@ export const TASKS: GuideTask[] = [
   { want: "See what creators like Johnny Harris or TLDR are making", go: "Ideas → Inspiration", href: "/ideas/inspiration", how: "Their latest videos and what's breaking out.", cost: "free", tags: "inspiration creators competitors" },
   { want: "Understand one story fast", go: "Open the story → editor's note, coverage timeline, research questions", href: "/discover", how: "Every outlet's version side by side, paywalled ones with free alternatives, Bangla translated to English.", cost: "mixed", tags: "story understand context coverage" },
   // Research
-  { want: "Save a link, tweet, video or note to look at later", go: "My research", href: "/inbox", how: "Paste anything; videos get transcribed by the Mac helper.", cost: "free", tags: "save inbox bookmark link" },
+  { want: "Save a link, tweet, video or note to look at later", go: "My research", href: "/inbox", how: "Paste anything; videos get transcribed on the server.", cost: "free", tags: "save inbox bookmark link" },
   { want: "Know what experts, think tanks and other countries say", go: "Expert views (or the panel on any story/project)", href: "/experts", how: "Start on At a glance: key points pulled from the sources. Read it yourself, jump to it in the library, or Ask AI to read it for you.", cost: "mixed", tags: "experts solutions policy research papers opinion think tank law treaty history" },
   { want: "Find solutions with pros and cons", go: "Expert views → Solutions brief tab", href: "/experts", how: "Options, who acts, examples elsewhere, pros/cons, feasibility in Bangladesh — only from the library.", cost: "ai", tags: "solutions pros cons policy options" },
   { want: "Look up a term I don't know", go: "Key terms row in any expert library", href: "/experts", how: "Click a term for a plain definition.", cost: "free", tags: "define term meaning glossary" },
@@ -34,13 +34,15 @@ export const TASKS: GuideTask[] = [
   { want: "Tell the app what I care about (and what to ignore)", go: "Preferences", href: "/preferences", how: "Focus and mute terms, channels, talk shows on/off.", cost: "free", tags: "preferences mute focus topics" },
   { want: "Change how often news updates", go: "Studio → the bar at the top (Checks by itself every…)", href: "/studio", how: "5, 10, 15, 30 or 60 minutes.", cost: "free", tags: "refresh interval update frequency" },
   { want: "Add or remove news sources", go: "Settings → Sources", href: "/settings?tab=sources", how: "Feeds, outlets and topic watches.", cost: "free", tags: "sources feeds outlets rss" },
+  { want: "Get transcripts of videos, Reels and TikToks", go: "Settings → Connections (one-time)", href: "/settings?tab=connections", how: "Paste a free Supadata key once; transcripts then come from the server, on any device.", cost: "free", tags: "transcript video reels tiktok instagram supadata connect" },
+  { want: "Use KNDL on my phone or another computer", go: "Just open kndl.newthingmedia.org and sign in", href: "/guide", how: "Everything runs on the server — any device, any time. Add it to your home screen from the browser's Share/⋮ menu.", cost: "free", tags: "phone mobile device laptop share access other people team" },
   { want: "Check or change the AI budget", go: "Settings → AI & usage", href: "/settings?tab=ai", how: "Daily and monthly limits; every AI button shows its cost first.", cost: "free", tags: "budget ai cost money usage" },
 ];
 
 export const AREAS: GuideArea[] = [
   { title: "Studio", href: "/studio", what: "Your home screen for today.", use: ["Top stories for the channel you're on", "Talk shows, statements, trends and untold angles", "The bar at the top shows when news last updated"], cost: "Free to browse; idea buttons use AI." },
   { title: "Discover", href: "/discover", what: "Every story from every outlet, grouped and ranked.", use: ["Breaking strip: last 6 hours + last 90 minutes", "For you = ranked for your interests; Latest = newest first", "Open a story for coverage, research questions and expert views"], cost: "Free; the AI brief and assessments are optional." },
-  { title: "My research", href: "/inbox", what: "Your inbox for anything you find elsewhere.", use: ["Paste links, posts, videos, notes", "Videos get transcribed for free by the Mac helper"], cost: "Free." },
+  { title: "My research", href: "/inbox", what: "Your inbox for anything you find elsewhere.", use: ["Paste links, posts, videos, notes", "Videos and Reels get transcribed on the server"], cost: "Free." },
   { title: "Expert views", href: "/experts", what: "What researchers, think tanks, governments and commentators say — and the solutions.", use: ["At a glance first, the full library behind it", "Filter by type or by Solutions / Other countries / History / Laws / Bangladesh", "★ keep items; in a project they become citable sources"], cost: "Gathering and the summary are free; Ask AI is a fraction of a cent; the Solutions brief is a few cents." },
   { title: "Projects", href: "/research", what: "One folder per piece of content.", use: ["Stories, sources, notes and questions together", "Script tab: hooks → outline → draft in your voice, with the ⏱ read-time bar", "YouTube and Monetise panels"], cost: "Free to organise; writing uses AI." },
   { title: "YouTube", href: "/youtube", what: "A full producer for @aninditarhine and Rhine Reviews.", use: ["Make a video: pick an idea and press Produce everything", "Plan, formats, set guide, competitors, title checker", "Teleprompter and recording pack"], cost: "A full video is usually around $1 of AI." },
@@ -58,10 +60,10 @@ export const DAY = [
 ];
 
 export const TROUBLE: [string, string][] = [
-  ["The news looks old", "Press Refresh feeds on Discover, or set Checks by itself every 5–10 minutes on Studio. The live site is also pinged every 10 minutes so it never falls asleep."],
+  ["The news looks old", "Press Refresh feeds on Discover, or set Checks by itself every 5–10 minutes on Studio. The server checks by itself; nothing depends on your computer."],
   ["Talk shows look old", "Switch the Talk shows list to Latest. Press its ↻ button to pull new episodes."],
-  ["A transcript is missing", "Transcripts come from the Mac helper (free). It runs every 10 minutes while your Mac is on, a few videos at a time so YouTube doesn't block it."],
-  ["Bangla text", "Switch on English under the Bangladesh tab — translated free on your Mac."],
+  ["A transcript is missing", "Transcripts come from the server through the transcript service (Settings → Connections, free plan 100 a month). They arrive within about 10 minutes. YouTube doesn't block it."],
+  ["Bangla text", "Headlines are translated to English automatically (free). For a whole Bangla transcript, press “Translate to English” on the episode."],
   ["An AI button is greyed out", "You've hit the daily or monthly budget, or the AI key is missing. Settings → AI & usage."],
   ["The read time feels wrong", "Measure your pace once (⏱ bar → Measure my reading pace). Add clips that play while you're silent."],
 ];

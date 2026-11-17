@@ -843,4 +843,12 @@ ALTER TABLE expert_items ADD COLUMN ai_note TEXT;
 UPDATE settings SET value = '10' WHERE key = 'ingest.interval_minutes' AND CAST(value AS INTEGER) > 10;
 `,
   },
+  {
+    id: 23,
+    name: "secrets-and-cloud-jobs",
+    sql: `
+-- Keys the creator pastes in the app (e.g. the transcript service). Never sent back to the browser.
+CREATE TABLE secrets (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);
+`,
+  },
 ];
