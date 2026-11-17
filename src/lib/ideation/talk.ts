@@ -39,11 +39,12 @@ export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number
        FROM articles a JOIN feeds f ON f.id = a.feed_id
        WHERE f.category = 'talk' AND f.enabled = 1
          AND (f.id IN (SELECT feed_id FROM channel_feeds WHERE channel_id = ?) OR NOT EXISTS (SELECT 1 FROM channel_feeds WHERE feed_id = f.id))
+         AND f.id NOT IN (SELECT feed_id FROM channel_talk_off WHERE channel_id = ?)
          AND COALESCE(a.published_at, a.fetched_at) >= datetime('now', ?)
          ${opts.language ? "AND COALESCE(f.language, 'en') = ?" : ""}
        ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT 300`,
     )
-    .all(...[ch.id, `-${opts.days ?? 10} days`, ...(opts.language ? [opts.language] : [])]) as Row[];
+    .all(...[ch.id, ch.id, `-${opts.days ?? 10} days`, ...(opts.language ? [opts.language] : [])]) as Row[];
   if (!rows.length) return [];
 
   // Numbers (best effort): views, and length to tell clips/Shorts from full episodes.
@@ -111,4 +112,19 @@ export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number
       return n < 2;
     })
     .slice(0, opts.limit ?? 12);
+}
+
+/** Every talk show, and whether it's on for the active channel. */
+export function talkShows(db: DB): { id: string; name: string; language: string; on: boolean }[] {
+  const ch = activeChannel(db);
+  return (db.prepare(
+    `SELECT f.id, f.name, COALESCE(f.language, 'en') AS language, NOT EXISTS (SELECT 1 FROM channel_talk_off o WHERE o.channel_id = ? AND o.feed_id = f.id) AS on_
+     FROM feeds f WHERE f.category = 'talk' AND f.enabled = 1 ORDER BY language, f.name`,
+  ).all(ch.id) as { id: string; name: string; language: string; on_: number }[]).map((r) => ({ id: r.id, name: r.name.replace(/ \(YouTube\)$/, ""), language: r.language, on: !!r.on_ }));
+}
+
+export function setTalkShow(db: DB, feedId: string, on: boolean): void {
+  const ch = activeChannel(db);
+  if (on) db.prepare("DELETE FROM channel_talk_off WHERE channel_id = ? AND feed_id = ?").run(ch.id, feedId);
+  else db.prepare("INSERT OR IGNORE INTO channel_talk_off (channel_id, feed_id) VALUES (?, ?)").run(ch.id, feedId);
 }

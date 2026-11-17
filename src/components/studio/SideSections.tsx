@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { Icon } from "../Icon";
 import { InlineIdeas } from "./InlineIdeas";
+import { SectionRefresh, type RefreshWhat } from "../SectionRefresh";
 import { timeAgo } from "@/lib/format";
 import type { Statement } from "@/lib/ideation/statements";
 import type { Opportunity } from "@/lib/ideation/opportunities";
@@ -15,11 +16,12 @@ import type { OwnChannel } from "@/lib/media";
 import type { TalkEpisode } from "@/lib/ideation/talk";
 
 /** Talk shows & podcasts: what hosts and guests are arguing about, as raw material for ideas. */
-export function TalkSection({ bn, en, full }: { bn: TalkEpisode[]; en: TalkEpisode[]; full?: boolean }) {
+export function TalkSection({ bn, en, full, updatedAt }: { bn: TalkEpisode[]; en: TalkEpisode[]; full?: boolean; updatedAt?: string | null }) {
   const [tab, setTab] = useState<"bn" | "en">(bn.length ? "bn" : "en");
   const list = (tab === "bn" ? bn : en).slice(0, full ? 30 : 5);
   return (
     <Section
+      refresh={{ what: "talk", at: updatedAt }}
       title="Talk shows & podcasts"
       hint="What Bangladeshi and international shows are arguing about. Open an episode for its key moments (from the transcript) and ideas from what was actually said."
       more={full ? undefined : { href: "/ideas/talk", label: "All" }}
@@ -54,7 +56,7 @@ export function TalkSection({ bn, en, full }: { bn: TalkEpisode[]; en: TalkEpiso
 import type { ChannelLinks } from "@/lib/channels";
 
 /** The creator's own channel at a glance: totals, latest uploads, and how each did against the usual. */
-export function YourChannelSection({ yt, links }: { yt: OwnChannel | null; links: ChannelLinks }) {
+export function YourChannelSection({ yt, links, updatedAt }: { yt: OwnChannel | null; links: ChannelLinks; updatedAt?: string | null }) {
   const longs = yt?.recent.filter((v) => v.seconds == null || v.seconds > 180) ?? [];
   const median = (arr: number[]) => (arr.length ? [...arr].sort((a, b) => a - b)[Math.floor(arr.length / 2)] : 0);
   const typical = median((yt?.recent ?? []).map((v) => v.views));
@@ -62,7 +64,7 @@ export function YourChannelSection({ yt, links }: { yt: OwnChannel | null; links
   const others = (["instagram", "facebook", "tiktok"] as const).filter((p) => links[p]);
   if (!yt && !links.youtube && !others.length) return null;
   return (
-    <Section title="Your channel" hint={yt ? `Latest uploads vs your typical ${compact(typical)} views.` : links.youtube ? "Add the YouTube key to see your numbers." : undefined}>
+    <Section title="Your channel" refresh={{ what: "performance", at: updatedAt }} hint={yt ? `Latest uploads vs your typical ${compact(typical)} views.` : links.youtube ? "Add the YouTube key to see your numbers." : undefined}>
       {yt && (
         <>
           <div className="mb-3 grid grid-cols-3 gap-2 text-center">
@@ -118,9 +120,9 @@ export function YourChannelSection({ yt, links }: { yt: OwnChannel | null; links
 
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(Math.round(n)));
 
-export function CreatorsSection({ videos, hasKey }: { videos: CreatorVideo[]; hasKey: boolean }) {
+export function CreatorsSection({ videos, hasKey, updatedAt }: { videos: CreatorVideo[]; hasKey: boolean; updatedAt?: string | null }) {
   return (
-    <Section title="What creators are making" hint={hasKey ? "Latest from your reference channels — breakouts first." : "Latest from your reference channels. Add the YouTube key to see views and breakouts."}>
+    <Section title="What creators are making" refresh={{ what: "creators", at: updatedAt }} hint={hasKey ? "Latest from your reference channels — breakouts first." : "Latest from your reference channels. Add the YouTube key to see views and breakouts."}>
       <ul>
         {videos.slice(0, 6).map((v) => (
           <Expandable
@@ -150,12 +152,15 @@ export function CreatorsSection({ videos, hasKey }: { videos: CreatorVideo[]; ha
   );
 }
 
-function Section({ title, hint, children, more }: { title: string; hint?: string; children: React.ReactNode; more?: { href: string; label: string } }) {
+function Section({ title, hint, children, more, refresh }: { title: string; hint?: string; children: React.ReactNode; more?: { href: string; label: string }; refresh?: { what: RefreshWhat; at?: string | null } }) {
   return (
     <section className="card p-4">
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h3 className="font-serif text-[16px] font-semibold">{title}</h3>
-        {more && <Link href={more.href} className="shrink-0 text-[12px] text-accent hover:underline">{more.label}</Link>}
+        <span className="flex shrink-0 items-center gap-2">
+          {refresh && <SectionRefresh what={refresh.what} updatedAt={refresh.at} />}
+          {more && <Link href={more.href} className="shrink-0 text-[12px] text-accent hover:underline">{more.label}</Link>}
+        </span>
       </div>
       {hint && <p className="-mt-1 mb-2 text-[11.5px] text-muted">{hint}</p>}
       {children}
@@ -180,9 +185,9 @@ function Expandable({ children, payload, label, extra }: { children: React.React
   );
 }
 
-export function StatementsSection({ statements }: { statements: Statement[] }) {
+export function StatementsSection({ statements, updatedAt }: { statements: Statement[]; updatedAt?: string | null }) {
   return (
-    <Section title="Statements radar" hint="Consequential things public figures said — from today's coverage.">
+    <Section title="Statements radar" refresh={{ what: "news", at: updatedAt }} hint="Consequential things public figures said — from today's coverage.">
       {statements.length === 0 ? (
         <p className="text-[12.5px] text-muted">No strong statements found in this channel&apos;s recent coverage.</p>
       ) : (
@@ -209,9 +214,9 @@ export function StatementsSection({ statements }: { statements: Statement[] }) {
   );
 }
 
-export function UntoldSection({ opps }: { opps: Opportunity[] }) {
+export function UntoldSection({ opps, updatedAt }: { opps: Opportunity[]; updatedAt?: string | null }) {
   return (
-    <Section title="Untold stories" hint="Big potential, little coverage — scored for free." more={{ href: "/ideas/untold", label: "All" }}>
+    <Section title="Untold stories" refresh={{ what: "news", at: updatedAt }} hint="Big potential, little coverage — scored for free." more={{ href: "/ideas/untold", label: "All" }}>
       <ul>
         {opps.slice(0, 6).map((o) => (
           <Expandable key={o.clusterId} label="Ideas from this story" payload={{ clusterIds: [o.clusterId] }}>
@@ -225,7 +230,7 @@ export function UntoldSection({ opps }: { opps: Opportunity[] }) {
   );
 }
 
-export function PulseSection({ trends, mostRead, onThisDay, geo }: { trends: { term: string; traffic: string | null }[]; mostRead: { title: string; views: number }[]; onThisDay: { year: number; text: string }[]; geo: string }) {
+export function PulseSection({ trends, mostRead, onThisDay, geo, updatedAt }: { updatedAt?: string | null; trends: { term: string; traffic: string | null }[]; mostRead: { title: string; views: number }[]; onThisDay: { year: number; text: string }[]; geo: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const empty = !trends.length && !mostRead.length;
@@ -235,7 +240,7 @@ export function PulseSection({ trends, mostRead, onThisDay, geo }: { trends: { t
     api("/api/pulse", "POST", {}).then(() => router.refresh()).catch(() => {}).finally(() => setLoading(false));
   }, [empty, router]);
   return (
-    <Section title="What people are into right now" hint={`Trending searches (${geo}), Wikipedia's most-read, and this day in history.`}>
+    <Section title="What people are into right now" refresh={{ what: "pulse", at: updatedAt }} hint={`Trending searches (${geo}), Wikipedia's most-read, and this day in history.`}>
       {loading && <p className="text-[12px] text-muted">Checking trends…</p>}
       {trends.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">

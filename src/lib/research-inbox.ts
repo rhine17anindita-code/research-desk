@@ -9,7 +9,7 @@ import { activeChannelId } from "./channels";
 import { detectKind, fetchLinkMeta, getText, isPublicHttpUrl, matchStories } from "./ideation/metadata";
 import { upsertSource } from "./repo/sources";
 import { stripHtml, truncate, uniqueTokens } from "./text";
-import { clock, downloadTranscript, windows } from "./transcripts";
+import { BOT_BLOCK, clock, downloadTranscript, queueTranscript, windows } from "./transcripts";
 import { youtubeId } from "./media";
 import { estimateTaskCost, runAiTask } from "./ai/service";
 import type { TaskOutcome } from "./research/ai-tasks";
@@ -126,9 +126,15 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
     const vid = detectKind(url) === "youtube" ? youtubeId(url) : null;
     try {
       if (vid) {
-        const tr = await downloadTranscript(vid);
-        body = tr?.segments.length ? windows(tr.segments).map((w) => `[${clock(w.start)}] ${w.text}`).join("\n") : null;
-        if (!body) error = "This video has no captions, so only its title and description were saved.";
+        try {
+          const tr = await downloadTranscript(vid);
+          body = tr?.segments.length ? windows(tr.segments).map((w) => `[${clock(w.start)}] ${w.text}`).join("\n") : null;
+          if (!body) error = "This video has no captions, so only its title and description were saved.";
+        } catch (e) {
+          if (!BOT_BLOCK.test((e as Error).message)) throw e;
+          queueTranscript(db, vid, null);
+          error = "The transcript is on its way from your Mac helper (within about 10 minutes while your Mac is on).";
+        }
       } else if (["article", "paper"].includes(detectKind(url))) {
         const html = await getText(url, "text/html", 3_000_000);
         body = articleText(html) || null;

@@ -6,6 +6,7 @@ import { latestReport } from "@/lib/performance/store";
 import { syncYoutubeIfStale } from "@/lib/performance/youtube-sync";
 import { syncMetaIfStale } from "@/lib/performance/meta";
 import { MetaConnect } from "@/components/performance/MetaConnect";
+import { SectionRefresh } from "@/components/SectionRefresh";
 import type { CommentInsights, StrategyReport } from "@/lib/performance/ai";
 import { getIdea, type Idea } from "@/lib/ideation/repo";
 import { backingFor } from "@/lib/ideation/backing";
@@ -46,7 +47,7 @@ export default async function PerformancePage() {
           <h1 className="font-serif text-[28px] font-bold tracking-tight">Performance</h1>
           <p className="text-[13px] text-muted">Your own numbers on every platform, what works for you, what your audience says — and what to make next. These numbers also steer your ideas and scripts.</p>
         </div>
-        <span className="flex items-center gap-2 text-[12px] text-muted">{synced ? `YouTube synced ${timeAgo(synced)}` : ""} <SyncButton /></span>
+        <span className="flex items-center gap-2 text-[12px] text-muted">Everything: <SectionRefresh what="performance" updatedAt={synced || null} /> <SyncButton /></span>
       </header>
 
       {/* Platform tiles */}

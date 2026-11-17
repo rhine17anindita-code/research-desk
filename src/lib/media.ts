@@ -205,3 +205,10 @@ export async function ownChannelStats(channelId: string, limit = 12): Promise<Ow
   ownCache.set(channelId, { at: Date.now(), data });
   return data;
 }
+
+/** Forget cached YouTube numbers so the next read is fresh (a section's refresh button). */
+export function clearMediaCaches(): void {
+  cache.clear();
+  statsCache.clear();
+  ownCache.clear();
+}

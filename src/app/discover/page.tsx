@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { rankFeed, type FeedQuery } from "@/lib/ranking";
 import { StoryCard } from "@/components/StoryCard";
 import { AssessButton, RefreshButton, SampleButton } from "@/components/FeedActions";
+import { SectionRefresh } from "@/components/SectionRefresh";
 import { timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,10 @@ export default async function DiscoverPage({ searchParams }: { searchParams: SP 
             {lastRun ? ` · updated ${timeAgo(lastRun.finished_at)}` : ""}
           </p>
         </div>
-        <RefreshButton />
+        <span className="flex items-center gap-2">
+          <SectionRefresh what="news" updatedAt={(db.prepare("SELECT MAX(started_at) AS t FROM ingest_runs").get() as { t: string | null }).t} />
+          <RefreshButton />
+        </span>
       </header>
 
       {hasSample && (

@@ -42,7 +42,11 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         </div>
       </header>
 
-      {!ok ? (
+      {t?.status === "queued" ? (
+        <div className="card px-4 py-4 text-[13px] text-muted">
+          The transcript is on its way: your Mac helper fetches it from your home internet (YouTube blocks hosting servers) and it appears here within about 10 minutes while your Mac is on. Refresh this page then.
+        </div>
+      ) : !ok ? (
         <div className="card px-4 py-4 text-[13px] text-muted">
           No transcript for this one{t?.error ? ` (${t.error})` : " — the show hasn't got captions on YouTube"}. You can still get ideas from its title and description on the talk-shows page.
         </div>

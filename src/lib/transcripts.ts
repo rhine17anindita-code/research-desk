@@ -5,6 +5,7 @@ import { youtubeId } from "./media";
 import { getArticle } from "./repo/stories";
 import { activeChannel, termMatcher } from "./channels";
 import { BD } from "./ideation/talk";
+import { getSetting, setSetting } from "./repo/settings";
 
 /**
  * Transcripts of talk shows and podcasts, from YouTube's own captions (free, no key).
@@ -20,7 +21,8 @@ export interface Transcript {
   kind: string | null;
   segments: Segment[];
   chars: number;
-  status: "ok" | "none" | "error";
+  /** queued = waiting for the Mac helper (YouTube blocks this server). */
+  status: "ok" | "none" | "error" | "queued";
   error: string | null;
   mined: unknown;
   minedAt: string | null;
@@ -85,29 +87,59 @@ export function cachedTranscript(db: DB, videoId: string): Transcript | null {
 }
 
 /** Transcript for a talk-show episode (article id), fetched once and cached. Misses are retried after 6 hours. */
+export const BOT_BLOCK = /not a bot|sign in to confirm|LOGIN_REQUIRED|unusual traffic/i;
+const blockedRecently = (db: DB) => {
+  const t = getSetting(db, "transcripts.blocked_at");
+  return !!t && Date.now() - Date.parse(t) < 24 * 3_600_000;
+};
+
+export function storeTranscript(
+  db: DB,
+  vid: string,
+  articleId: string | null,
+  r: { status: Transcript["status"]; language?: string | null; kind?: string | null; segments?: Segment[]; error?: string | null },
+) {
+  const segs = r.segments ?? [];
+  db.prepare(
+    `INSERT INTO transcripts (video_id, article_id, language, kind, segments, chars, status, error, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(video_id) DO UPDATE SET article_id = COALESCE(excluded.article_id, article_id), language = excluded.language, kind = excluded.kind, segments = excluded.segments,
+       chars = excluded.chars, status = excluded.status, error = excluded.error, fetched_at = excluded.fetched_at`,
+  ).run(vid, articleId, r.language ?? null, r.kind ?? null, JSON.stringify(segs), segs.reduce((n, x) => n + x.text.length, 0), r.status, r.error ?? null, nowIso());
+}
+
+/** Ask for a transcript the server can't fetch itself: the Mac helper picks it up. */
+export function queueTranscript(db: DB, vid: string, articleId: string | null) {
+  const cur = cachedTranscript(db, vid);
+  if (cur && (cur.status === "ok" || cur.status === "queued")) return;
+  storeTranscript(db, vid, articleId, { status: "queued", error: null });
+}
+
+/**
+ * Transcript for a talk-show episode (article id), fetched once and cached. Misses are retried
+ * after 6 hours. When YouTube blocks this server (it does for most hosting companies), the job is
+ * queued for the Mac helper instead of showing YouTube's "not a bot" message.
+ */
 export async function transcriptFor(db: DB, articleId: string): Promise<Transcript | null> {
   const a = getArticle(db, articleId);
   const vid = a ? youtubeId(a.url) : null;
   if (!a || !vid) return null;
   const cached = cachedTranscript(db, vid);
-  if (cached && (cached.status === "ok" || Date.now() - Date.parse(cached.fetchedAt) < 6 * 3_600_000)) return cached;
-  let status: Transcript["status"] = "ok";
-  let error: string | null = null;
-  let got: Awaited<ReturnType<typeof downloadTranscript>> = null;
+  if (cached && (cached.status === "ok" || cached.status === "queued" || Date.now() - Date.parse(cached.fetchedAt) < 6 * 3_600_000)) return cached;
+  if (blockedRecently(db)) {
+    queueTranscript(db, vid, articleId);
+    return cachedTranscript(db, vid);
+  }
   try {
     const lang = (db.prepare("SELECT COALESCE(a.language, f.language, 'en') AS l FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.id = ?").get(articleId) as { l: string } | undefined)?.l ?? "en";
-    got = await downloadTranscript(vid, lang.slice(0, 2));
-    if (!got || !got.segments.length) status = "none";
+    const got = await downloadTranscript(vid, lang.slice(0, 2));
+    storeTranscript(db, vid, articleId, got?.segments.length ? { status: "ok", ...got } : { status: "none" });
   } catch (e) {
-    status = "error";
-    error = (e as Error).message.slice(0, 300);
+    const msg = (e as Error).message;
+    if (BOT_BLOCK.test(msg)) {
+      setSetting(db, "transcripts.blocked_at", nowIso());
+      storeTranscript(db, vid, articleId, { status: "queued" });
+    } else storeTranscript(db, vid, articleId, { status: "error", error: msg.slice(0, 300) });
   }
-  const segs = got?.segments ?? [];
-  db.prepare(
-    `INSERT INTO transcripts (video_id, article_id, language, kind, segments, chars, status, error, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(video_id) DO UPDATE SET article_id = excluded.article_id, language = excluded.language, kind = excluded.kind, segments = excluded.segments,
-       chars = excluded.chars, status = excluded.status, error = excluded.error, fetched_at = excluded.fetched_at`,
-  ).run(vid, articleId, got?.language ?? null, got?.kind ?? null, JSON.stringify(segs), segs.reduce((n, s) => n + s.text.length, 0), status, error, nowIso());
   return cachedTranscript(db, vid);
 }
 

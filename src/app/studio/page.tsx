@@ -42,6 +42,7 @@ export default async function StudioPage() {
   // Safety net if the server's own schedule is off or asleep: pull when the page is opened and things are old.
   const stale = !lastIngest || Date.now() - Date.parse(lastIngest) > 30 * 60_000;
   const live = liveStatus(db, getSetting(db, "studio.seen_at") || null);
+  const lastTalk = (db.prepare("SELECT MAX(a.fetched_at) AS t FROM articles a JOIN feeds f ON f.id = a.feed_id WHERE f.category = 'talk'").get() as { t: string | null }).t;
   const deck = listIdeas(db, { status: "new", limit: 60 }).sort((a, b) => score(b) - score(a));
   const backing = backingFor(db, deck);
   const pulse = cachedPulse(db, ch.geo);
@@ -89,7 +90,7 @@ export default async function StudioPage() {
             <div className="mt-4"><GeneratePanel compact /></div>
           </section>
 
-          <StoriesToBuild stories={storiesToBuild(db, 6)} />
+          <StoriesToBuild stories={storiesToBuild(db, 6)} updatedAt={lastIngest} />
 
           <Pipeline
             mine={listIdeas(db, { origin: "user", status: ["saved", "developing", "made", "new"], limit: 50 })}
@@ -100,13 +101,13 @@ export default async function StudioPage() {
         </div>
 
         <aside className="space-y-4">
-          <YourChannelSection yt={await ownYoutube(db)} links={ch.links} />
+          <YourChannelSection yt={await ownYoutube(db)} links={ch.links} updatedAt={getSetting(db, "perf.youtube_synced_at") || null} />
           <MyResearchSection items={listResearch(db, 4).map(({ id, title, kind, createdAt, status }) => ({ id, title, kind, createdAt, status }))} />
-          <StatementsSection statements={findStatements(db, { limit: 10 })} />
-          <UntoldSection opps={findOpportunities(db, { limit: 8 })} />
-          <TalkSection bn={await talkEpisodes(db, { language: "bn", limit: 8 })} en={await talkEpisodes(db, { language: "en", limit: 8 })} />
-          <CreatorsSection videos={await referenceVideos(db, 8)} hasKey={youtubeConfigured()} />
-          <PulseSection trends={pulse?.trends ?? []} mostRead={pulse?.mostRead ?? []} onThisDay={pulse?.onThisDay ?? []} geo={ch.geo} />
+          <StatementsSection statements={findStatements(db, { limit: 10 })} updatedAt={lastIngest} />
+          <UntoldSection opps={findOpportunities(db, { limit: 8 })} updatedAt={lastIngest} />
+          <TalkSection bn={await talkEpisodes(db, { language: "bn", limit: 8 })} en={await talkEpisodes(db, { language: "en", limit: 8 })} updatedAt={lastTalk} />
+          <CreatorsSection videos={await referenceVideos(db, 8)} hasKey={youtubeConfigured()} updatedAt={lastIngest} />
+          <PulseSection trends={pulse?.trends ?? []} mostRead={pulse?.mostRead ?? []} onThisDay={pulse?.onThisDay ?? []} geo={ch.geo} updatedAt={pulse?.fetchedAt ?? null} />
           <InspirationSection items={listInspirations(db, 10)} />
           <Link href="/ideas/taste" className="block text-center text-[12.5px] text-accent hover:underline">What it has learned about this channel →</Link>
         </aside>

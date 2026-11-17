@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { SectionRefresh } from "../SectionRefresh";
 import { Icon } from "../Icon";
 import { InlineIdeas } from "./InlineIdeas";
 import type { BuildStory } from "@/lib/ideation/build-stories";
 
 /** Today's best raw material: big stories that need an original angle, and untold ones. Refreshes with every feed update. */
-export function StoriesToBuild({ stories }: { stories: BuildStory[] }) {
+export function StoriesToBuild({ stories, updatedAt }: { stories: BuildStory[]; updatedAt?: string | null }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -19,7 +20,7 @@ export function StoriesToBuild({ stories }: { stories: BuildStory[] }) {
     <section>
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="font-serif text-[20px] font-semibold">Stories worth building</h2>
-        <span className="text-[12px] text-muted">Updates with every feed refresh</span>
+        <SectionRefresh what="news" updatedAt={updatedAt} />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {stories.map((s, n) => (

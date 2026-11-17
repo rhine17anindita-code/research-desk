@@ -642,4 +642,22 @@ DELETE FROM channels WHERE name = 'Rhine Reviews' AND id != 'ch_culture';
 UPDATE channels SET meta_page_id = '1027427880451032' WHERE id = 'ch_default' AND meta_page_id IS NULL;
 `,
   },
+  {
+    id: 11,
+    name: "talk-per-channel",
+    sql: `
+-- Talk shows switched off for a channel (everything else stays on).
+CREATE TABLE channel_talk_off (
+  channel_id TEXT NOT NULL,
+  feed_id TEXT NOT NULL,
+  PRIMARY KEY (channel_id, feed_id)
+);
+-- Politics channel: drop the shows that are mostly noise for Bangladesh current affairs.
+INSERT OR IGNORE INTO channel_talk_off (channel_id, feed_id)
+  SELECT 'ch_default', id FROM feeds WHERE category = 'talk' AND name IN ('The Joe Rogan Experience', 'Tucker Carlson', 'PBD Podcast', 'Chris Williamson (Modern Wisdom)', 'BeerBiceps (The Ranveer Show)');
+-- Rhine Reviews (culture): keep culture/history/long-form conversation shows, switch off the news talk shows.
+INSERT OR IGNORE INTO channel_talk_off (channel_id, feed_id)
+  SELECT 'ch_culture', id FROM feeds WHERE category = 'talk' AND name NOT IN ('The Rest Is History', 'Lex Fridman', 'The Diary Of A CEO', 'Hasan Minhaj', 'Chris Williamson (Modern Wisdom)', 'BeerBiceps (The Ranveer Show)', 'DW Alap');
+`,
+  },
 ];

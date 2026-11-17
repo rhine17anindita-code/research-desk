@@ -37,6 +37,10 @@ export interface AppSettings {
   "perf.youtube_synced_at": string;
   /** Last time Instagram/Facebook numbers were pulled through the Meta connection. */
   "perf.meta_synced_at": string;
+  /** When YouTube last refused this server ("confirm you're not a bot"); transcripts then come from the Mac helper. */
+  "transcripts.blocked_at": string;
+  /** When the Mac helper last checked in. */
+  "helper.seen_at": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -70,4 +74,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "studio.seen_at": "",
   "perf.youtube_synced_at": "",
   "perf.meta_synced_at": "",
+  "transcripts.blocked_at": "",
+  "helper.seen_at": "",
 };

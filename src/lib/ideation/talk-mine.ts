@@ -45,6 +45,7 @@ export async function mineEpisode(db: DB, articleId: string, opts: { estimateOnl
   const a = getArticle(db, articleId);
   if (!a) return { ok: false, reason: "provider_error", message: "Episode not found" };
   const t = await transcriptFor(db, articleId);
+  if (t?.status === "queued") return { ok: false, reason: "provider_error", message: "The transcript isn't here yet — your Mac helper is fetching it. Try again in about 10 minutes." };
   if (!t || t.status !== "ok") return { ok: false, reason: "provider_error", message: t?.error ? `No transcript: ${t.error}` : "This episode has no captions on YouTube, so it can't be read." };
   const { text, partial } = transcriptText(db, t, 60000);
   const ch = activeChannel(db);
