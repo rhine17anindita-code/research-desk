@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { StoryLens } from "@/components/StoryLens";
 import { getNote, storyLens } from "@/lib/ideation/lens";
+import { freeAlternatives } from "@/lib/ingest/fulltext";
+import { getTranslation, isBangla } from "@/lib/translate";
+import { En } from "@/components/English";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getDb } from "@/lib/db";
@@ -28,6 +31,7 @@ const TEXT_LABEL: Record<string, [string, string]> = {
   summary: ["short page (video, live update or paywall)", "bg-warn-soft text-warn"],
   headline: ["headline only", "bg-surface-2 text-muted"],
   blocked: ["fetching from your Mac…", "bg-accent-soft text-accent"],
+  paywalled: ["paywalled · recommended read", "bg-ai-soft text-ai"],
 };
 
 export const dynamic = "force-dynamic";
@@ -142,7 +146,21 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
                   <a href={a.directUrl || a.url} target="_blank" rel="noreferrer" className="block text-[13px] font-medium leading-snug text-ink hover:underline">
                     {a.title} <Icon name="external" size={11} className="inline text-muted" />
                   </a>
+                  {isBangla(a.title) && <En text={getTranslation(db, "article", a.id)?.[0]} className="text-[12.5px]" />}
                   {a.summary && <p className="mt-0.5 line-clamp-3 text-[12.5px] leading-relaxed text-ink-2">{a.summary}</p>}
+                  {a.textStatus === "paywalled" && (() => {
+                    const alts = freeAlternatives(db, a.id);
+                    return (
+                      <div className="mt-1 rounded-lg bg-ai-soft/40 px-2.5 py-1.5 text-[12px]">
+                        <span className="text-muted">Worth reading if you subscribe. The same information for free:</span>
+                        {alts.length ? (
+                          <ul className="mt-0.5 space-y-0.5">
+                            {alts.map((x) => <li key={x.id}><a href={x.url} target="_blank" rel="noreferrer" className="text-accent hover:underline">{x.title}</a> <span className="text-muted">— {x.publisher}</span></li>)}
+                          </ul>
+                        ) : <span className="text-muted"> no free full-text coverage yet — the summary above is what research uses.</span>}
+                      </div>
+                    );
+                  })()}
                 </li>
               ))}
             </ol>

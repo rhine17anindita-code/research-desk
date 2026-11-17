@@ -4,6 +4,7 @@ import { verifyHelper } from "@/lib/helper-auth";
 import { nowIso } from "@/lib/ids";
 import { getSetting, setSetting } from "@/lib/repo/settings";
 import { youtubeId } from "@/lib/media";
+import { translationJobs } from "@/lib/translate";
 
 /** Work for the Mac helper: transcripts this server can't fetch itself (YouTube blocks it). */
 export const GET = route((req: Request) => {
@@ -36,5 +37,7 @@ export const GET = route((req: Request) => {
   ];
   // News pages this server was refused: the helper reads them from home internet.
   const pages = db.prepare("SELECT id, url FROM articles WHERE text_status = 'blocked' ORDER BY fetched_at DESC LIMIT 25").all() as { id: string; url: string }[];
-  return { ok: true, jobs, media, pages };
+  // Bangla content to translate into English (free, offline on the Mac).
+  const translate = translationJobs(db);
+  return { ok: true, jobs, media, pages, translate };
 });

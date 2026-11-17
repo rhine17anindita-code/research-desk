@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "../Icon";
+import { En } from "../English";
 import { AiButton } from "../AiButton";
 import { InlineIdeas, IdeaQuickActions } from "./InlineIdeas";
 import { IdeaCard, type BackingInfo } from "../ideas/IdeaCard";
@@ -18,7 +19,7 @@ const clock = (sec: number) => {
 };
 
 /** The moments worth a look, found for free by scanning the transcript. */
-export function EpisodeMoments({ articleId, moments }: { articleId: string; moments: Moment[] }) {
+export function EpisodeMoments({ articleId, moments }: { articleId: string; moments: (Moment & { en?: string | null })[] }) {
   return (
     <section className="card px-4 py-3">
       <h2 className="font-serif text-[18px] font-semibold">Moments worth a look</h2>
@@ -32,7 +33,7 @@ export function EpisodeMoments({ articleId, moments }: { articleId: string; mome
   );
 }
 
-function MomentRow({ articleId, m }: { articleId: string; m: Moment }) {
+function MomentRow({ articleId, m }: { articleId: string; m: Moment & { en?: string | null } }) {
   const [open, setOpen] = useState(false);
   const [full, setFull] = useState(false);
   return (
@@ -42,6 +43,7 @@ function MomentRow({ articleId, m }: { articleId: string; m: Moment }) {
         {m.reasons.slice(0, 3).map((r) => <span key={r} className="chip !text-[11px]">{r}</span>)}
       </div>
       <p className={`mt-1 text-[13px] leading-relaxed text-ink-2 ${full ? "" : "line-clamp-3"}`}>{m.text}</p>
+      <En text={m.en} className={`mt-0.5 text-[13px] leading-relaxed ${full ? "" : "line-clamp-3"}`} />
       <div className="mt-1 flex gap-3">
         <button className="btn-ghost !px-0 !text-[12px]" onClick={() => setFull((f) => !f)}>{full ? "Less" : "Read all of it"}</button>
         <button className="btn-ghost !px-0 !text-[12px] !text-accent" onClick={() => setOpen((o) => !o)}>

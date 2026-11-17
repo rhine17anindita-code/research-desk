@@ -92,7 +92,7 @@ async function media(job) {
 }
 
 async function runSite() {
-  const { jobs, media: mediaJobs = [], pages = [] } = await call("/api/helper/jobs");
+  const { jobs, media: mediaJobs = [], pages = [], translate = [] } = await call("/api/helper/jobs");
   let done = 0;
   for (const job of jobs) {
     try {
@@ -128,7 +128,26 @@ async function runSite() {
       await call("/api/helper/page", { method: "POST", body: JSON.stringify({ id: p.id, status: "summary" }) }).catch(() => {});
     }
   }
-  log(`${SITE}: ${done}/${jobs.length} transcripts, ${vids}/${mediaJobs.length} videos, ${read}/${pages.length} news pages`);
+  let translated = 0;
+  const modelDir = path.join(os.homedir(), ".research-desk-models/nllb-600m-int8");
+  if (translate.length && fs.existsSync(modelDir)) {
+    // One model load for the whole batch: every job's parts in one go, then split back.
+    try {
+      const all = translate.flatMap((j) => j.parts);
+      const out = execFileSync(path.join(VENV, "python"), ["-I", path.join(ROOT, "scripts/translate.py")], { input: JSON.stringify({ parts: all }), timeout: 3600000, maxBuffer: 64 * 1024 * 1024, stdio: ["pipe", "pipe", "ignore"] });
+      const parts = JSON.parse(out.toString()).parts;
+      let k = 0;
+      for (const j of translate) {
+        const mine = parts.slice(k, k + j.parts.length);
+        k += j.parts.length;
+        await call("/api/helper/translation", { method: "POST", body: JSON.stringify({ kind: j.kind, id: j.id, parts: mine }) });
+        translated++;
+      }
+    } catch (e) {
+      log("translation failed", e.message);
+    }
+  }
+  log(`${SITE}: ${done}/${jobs.length} transcripts, ${vids}/${mediaJobs.length} videos, ${read}/${pages.length} news pages, ${translated}/${translate.length} translations`);
 }
 
 async function run() {

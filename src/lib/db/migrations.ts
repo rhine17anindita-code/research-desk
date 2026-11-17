@@ -745,4 +745,19 @@ ALTER TABLE articles ADD COLUMN direct_url TEXT;    -- the outlet's own link, fo
 CREATE INDEX idx_articles_text_status ON articles(text_status);
 `,
   },
+  {
+    id: 17,
+    name: "translations",
+    sql: `
+-- English translations of Bangla content, made for free on the Mac (offline model), never by paid AI.
+CREATE TABLE translations (
+  kind TEXT NOT NULL,                -- transcript (video id) | article | research | voice
+  ref_id TEXT NOT NULL,
+  parts TEXT NOT NULL,               -- JSON array of English texts, aligned with the original's parts
+  model TEXT,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (kind, ref_id)
+);
+`,
+  },
 ];

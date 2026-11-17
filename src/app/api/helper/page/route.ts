@@ -11,6 +11,7 @@ export const POST = route(async (req: Request) => {
   const b = await body<{ id: string; html?: string; status?: "failed" | "summary" }>(req);
   const db = getDb();
   if (b.html) saveHelperPage(db, b.id, b.html.slice(0, 3_000_000));
-  else saveText(db, b.id, b.status === "summary" ? "summary" : "failed");
+  // Refused from home internet too: it's a paywall, so it becomes a recommended read with free alternatives.
+  else saveText(db, b.id, b.status === "summary" ? "paywalled" : "failed");
   return { ok: true };
 });

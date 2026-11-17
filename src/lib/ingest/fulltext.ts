@@ -12,6 +12,16 @@ import { jaccard, truncate, uniqueTokens } from "../text";
 
 const FULL = 1200; // characters: shorter usually means a paywall teaser or a blocked page
 
+/** Outlets that put most articles behind a subscription: shown as recommended reads with free alternatives. */
+export const PAYWALLED = /(^|\.)(ft\.com|economist\.com|thediplomat\.com|scmp\.com|japantimes\.co\.jp|wsj\.com|bloomberg\.com|washingtonpost\.com|theatlantic\.com|newyorker\.com|foreignaffairs\.com|telegraph\.co\.uk|thetimes\.co\.uk|thetimes\.com|haaretz\.com|hbr\.org|barrons\.com|nikkei\.com|asia\.nikkei\.com|lemonde\.fr|spiegel\.de|businessinsider\.com)$/i;
+export const isPaywalled = (url: string) => {
+  try {
+    return PAYWALLED.test(new URL(url).hostname.replace(/^www\./, ""));
+  } catch {
+    return false;
+  }
+};
+
 interface Row { id: string; url: string; title: string; cluster_id: string | null; publisher: string | null }
 
 export function articlesNeedingText(db: DB, limit = 40): Row[] {
@@ -76,6 +86,7 @@ export async function fetchFullText(db: DB, limit = 40): Promise<{ full: number;
           continue;
         }
         if (!isPublicHttpUrl(a.url)) { saveText(db, a.id, "failed"); continue; }
+        if (isPaywalled(a.url)) { saveText(db, a.id, "paywalled"); out.summary++; continue; }
         try {
           const text = articleText(await getText(a.url, "text/html", 3_000_000));
           const status = text.length >= FULL ? "full" : "summary";
@@ -84,7 +95,8 @@ export async function fetchFullText(db: DB, limit = 40): Promise<{ full: number;
         } catch (e) {
           // Refused (403/429…) — often just this server's address: the Mac helper retries from home.
           const m = (e as Error).message;
-          const blocked = /HTTP (401|403|429|451|503)/.test(m);
+          if (/HTTP (401|402)/.test(m)) { saveText(db, a.id, "paywalled"); continue; }
+          const blocked = /HTTP (403|429|451|503)/.test(m);
           saveText(db, a.id, blocked ? "blocked" : "failed");
           if (blocked) out.blocked++;
         }
@@ -103,4 +115,28 @@ export async function fetchFullText(db: DB, limit = 40): Promise<{ full: number;
 export function saveHelperPage(db: DB, articleId: string, html: string) {
   const text = articleText(html);
   saveText(db, articleId, text.length >= FULL ? "full" : text.length >= 300 ? "summary" : "failed", text.length >= 300 ? text : null);
+}
+
+/** Free, full-text articles covering the same story (for paywalled ones): same story first, then related stories. */
+export function freeAlternatives(db: DB, articleId: string, limit = 3): { id: string; title: string; publisher: string | null; url: string }[] {
+  const a = db.prepare("SELECT cluster_id FROM articles WHERE id = ?").get(articleId) as { cluster_id: string | null } | undefined;
+  if (!a?.cluster_id) return [];
+  const pick = (clusterIds: string[]) =>
+    clusterIds.length
+      ? (db.prepare(
+          `SELECT id, title, publisher, COALESCE(direct_url, url) AS url FROM articles WHERE cluster_id IN (${clusterIds.map(() => "?").join(",")}) AND id != ? AND text_status = 'full'
+           GROUP BY publisher ORDER BY length(full_text) DESC LIMIT ?`,
+        ).all(...clusterIds, articleId, limit) as { id: string; title: string; publisher: string | null; url: string }[])
+      : [];
+  const same = pick([a.cluster_id]);
+  if (same.length >= limit) return same;
+  const st = db.prepare("SELECT tokens FROM clusters WHERE id = ?").get(a.cluster_id) as { tokens: string } | undefined;
+  const toks = new Set<string>(JSON.parse(st?.tokens ?? "[]"));
+  const related = (db.prepare("SELECT id, tokens FROM clusters WHERE id != ? AND last_updated_at >= datetime('now', '-14 days') ORDER BY source_count DESC LIMIT 400").all(a.cluster_id) as { id: string; tokens: string }[])
+    .map((c) => ({ id: c.id, s: jaccard(toks, new Set<string>(JSON.parse(c.tokens))) }))
+    .filter((c) => c.s >= 0.3)
+    .sort((x, y) => y.s - x.s)
+    .slice(0, 3)
+    .map((c) => c.id);
+  return [...same, ...pick(related)].slice(0, limit);
 }

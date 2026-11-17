@@ -23,6 +23,8 @@ export interface TalkEpisode {
   breakout: number | null;
   short: boolean;
   inNews: boolean;
+  /** English title (free translation from your Mac) for Bangla episodes. */
+  titleEn: string | null;
   score: number;
   reasons: string[];
 }
@@ -99,6 +101,7 @@ export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number
     return {
       articleId: r.id, title: r.title, url: r.url, show: r.feed_name.replace(/ \(YouTube\)$/, ""), language: r.language ?? "en", publishedAt: r.published_at,
       thumbnail: r.image_url, summary: r.summary, views: st?.views ?? null, breakout, short, inNews, score, reasons,
+      titleEn: (db.prepare("SELECT json_extract(parts, '$[0]') AS t FROM translations WHERE kind = 'article' AND ref_id = ?").get(r.id) as { t: string | null } | undefined)?.t ?? null,
     };
   });
 

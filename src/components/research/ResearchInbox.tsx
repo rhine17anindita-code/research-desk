@@ -7,6 +7,7 @@ import { api } from "../api";
 import { Icon } from "../Icon";
 import { AiButton } from "../AiButton";
 import { InlineIdeas } from "../studio/InlineIdeas";
+import { En, EnglishSwitch } from "../English";
 import { timeAgo } from "@/lib/format";
 import type { ResearchView } from "@/lib/research-inbox";
 
@@ -126,6 +127,12 @@ export function ResearchCard({ item: initial, defaultOpen }: { item: ResearchVie
         <div className="mt-1">
           <p className={`whitespace-pre-line text-[12.5px] leading-relaxed text-muted ${show ? "max-h-[420px] overflow-y-auto" : "line-clamp-3"}`}>{item.body}</p>
           <button className="btn-ghost !px-0 !text-[12px]" onClick={() => setShow((s) => !s)}>{show ? "Less" : `Read all (${Math.round(item.chars / 100) / 10}K characters)`}</button>
+        </div>
+      )}
+      {item.bangla && (
+        <div className="mt-1">
+          <EnglishSwitch pending={!item.english} />
+          {item.english && <En text={item.english} className="mt-1 max-h-[320px] overflow-y-auto whitespace-pre-line text-[12.5px] not-italic leading-relaxed text-ink-2" />}
         </div>
       )}
       {item.error && <p className="mt-1 text-[12px] text-warn">{item.error}</p>}

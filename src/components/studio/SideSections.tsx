@@ -7,6 +7,7 @@ import { api } from "../api";
 import { Icon } from "../Icon";
 import { InlineIdeas } from "./InlineIdeas";
 import { SectionRefresh, type RefreshWhat } from "../SectionRefresh";
+import { En, EnglishSwitch } from "../English";
 import { timeAgo } from "@/lib/format";
 import type { Statement } from "@/lib/ideation/statements";
 import type { Opportunity } from "@/lib/ideation/opportunities";
@@ -29,6 +30,7 @@ export function TalkSection({ bn, en, full, updatedAt }: { bn: TalkEpisode[]; en
       <div className="mb-2 flex gap-1">
         <button className={tab === "bn" ? "chip-accent" : "chip"} onClick={() => setTab("bn")}>Bangladesh ({bn.length})</button>
         <button className={tab === "en" ? "chip-accent" : "chip"} onClick={() => setTab("en")}>International ({en.length})</button>
+        {tab === "bn" && <span className="ml-auto"><EnglishSwitch pending={bn.some((e) => !e.titleEn)} /></span>}
       </div>
       <ul className={full ? "grid gap-x-6 md:grid-cols-2" : ""}>
         {list.map((e) => (
@@ -40,6 +42,7 @@ export function TalkSection({ bn, en, full, updatedAt }: { bn: TalkEpisode[]; en
               )}
               <span className="min-w-0">
                 <span className="line-clamp-2 text-[13px] font-medium leading-snug text-ink hover:underline">{e.title}</span>
+                <En text={e.titleEn} className="line-clamp-2 text-[12px] leading-snug" />
                 <span className="mt-0.5 block text-[11.5px] text-muted">
                   {e.show}{e.publishedAt ? ` · ${timeAgo(e.publishedAt)}` : ""}{e.views != null ? ` · ${compact(e.views)} views` : ""}{e.short ? " · clip" : ""}
                 </span>

@@ -7,6 +7,8 @@ import { getIdea, type Idea } from "@/lib/ideation/repo";
 import { backingFor } from "@/lib/ideation/backing";
 import { timeAgo } from "@/lib/format";
 import { EpisodeMoments, MineEpisode } from "@/components/studio/Episode";
+import { En, EnglishSwitch } from "@/components/English";
+import { getTranslation, isBangla } from "@/lib/translate";
 import type { Mined } from "@/lib/ideation/talk-mine";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,16 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   const t = await transcriptFor(db, id);
   const ok = t?.status === "ok";
   const moments = ok ? findMoments(db, t!, 8) : [];
+  // English translation (made free on your Mac) for Bangla transcripts, aligned window by window.
+  const ws = ok ? windows(t!.segments) : [];
+  const bangla = ok && isBangla(ws.slice(0, 5).map((w) => w.text).join(" "));
+  const en = bangla ? getTranslation(db, "transcript", t!.videoId) : null;
+  const enAt = (start: number) => {
+    if (!en) return null;
+    const i = ws.findIndex((w) => w.end > start);
+    return en[Math.max(0, i)] ?? null;
+  };
+  const titleEn = isBangla(a.title) ? getTranslation(db, "article", id)?.[0] ?? null : null;
   const mined = (ok ? t!.mined : null) as Mined | null;
   const ideas = (mined?.ideaIds ?? []).map((i) => getIdea(db, i)).filter((x): x is Idea => !!x);
   return (
@@ -33,6 +45,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         <div className="min-w-0 flex-1">
           <div className="text-[12.5px] font-medium text-accent">{(a.publisher ?? "Talk show").replace(/ \(YouTube\)$/, "")}{a.publishedAt ? ` · ${timeAgo(a.publishedAt)}` : ""}</div>
           <h1 className="line-clamp-3 font-serif text-[21px] font-bold leading-tight">{a.title.replace(/(\s#[^\s#]+)+\s*$/, "")}</h1>
+          <En text={titleEn} className="text-[14px] not-italic" />
           <a href={a.url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12.5px] text-muted hover:text-ink hover:underline">Watch on YouTube ↗</a>
           {ok && (
             <p className="mt-1 text-[12px] text-muted">
@@ -52,15 +65,17 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         </div>
       ) : (
         <>
-          <EpisodeMoments articleId={id} moments={moments} />
+          {bangla && <div className="flex justify-end"><EnglishSwitch pending={!en} /></div>}
+          <EpisodeMoments articleId={id} moments={moments.map((m) => ({ ...m, en: enAt(m.start) }))} />
           <MineEpisode articleId={id} mined={mined} ideas={ideas} backing={backingFor(db, ideas)} />
           <details className="card px-4 py-3">
             <summary className="cursor-pointer font-serif text-[16px] font-semibold">Full transcript</summary>
             <div className="mt-3 max-h-[600px] space-y-2 overflow-y-auto pr-2 text-[13px] leading-relaxed text-ink-2">
-              {windows(t!.segments).map((w) => (
+              {ws.map((w, i) => (
                 <p key={w.start}>
                   <a href={watchUrl(t!.videoId, w.start)} target="_blank" rel="noreferrer" className="mr-2 font-mono text-[11.5px] text-accent hover:underline">{clock(w.start)}</a>
                   {w.text}
+                  <En text={en?.[i]} className="mt-0.5" />
                 </p>
               ))}
             </div>
