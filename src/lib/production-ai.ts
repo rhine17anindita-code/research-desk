@@ -37,6 +37,15 @@ const WRITER = `You are ghost-writing for a specific creator. The single most im
 - Specific beats generic: names, numbers, places, dates from the material. One idea per beat. Earn every line.
 - No AI tells: no "not X, but Y" flourishes, no rule-of-three lists for rhythm, no rhetorical-question chains, no dramatic one-word sentences unless the creator does that, no em-dash habit, no moralising wrap-up.`;
 
+/** The project's own dials, if it has them. */
+const projectDials = (p: Production) => {
+  try {
+    return p.docs.dials ? (JSON.parse(p.docs.dials) as Record<string, number>) : null;
+  } catch {
+    return null;
+  }
+};
+
 function itemBlock(p: Production): string {
   return [
     `CONTENT TYPE: ${TYPE_BY_ID[p.contentType]?.label ?? p.contentType}. ${SHAPE[p.contentType] ?? SHAPE.video}`,
@@ -70,7 +79,7 @@ export async function writeHooks(db: DB, projectId: string, opts: { estimateOnly
   const p = getProduction(db, projectId);
   if (!m || !p) return { ok: false, reason: "provider_error", message: "Project not found" };
   const perf = performanceBrief(db);
-  const user = [styleBlock(db, { preset: opts.preset }), itemBlock(p), perf ? `WHAT HAS WORKED FOR THEM:\n${perf.split("\n").slice(0, 25).join("\n")}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 40000)].filter(Boolean).join("\n\n");
+  const user = [styleBlock(db, { preset: opts.preset, dials: projectDials(p) }), itemBlock(p), perf ? `WHAT HAS WORKED FOR THEM:\n${perf.split("\n").slice(0, 25).join("\n")}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 40000)].filter(Boolean).join("\n\n");
   const task = {
     task: "script.hooks",
     system: `${WRITER}
@@ -100,7 +109,7 @@ export async function writeOutline(db: DB, projectId: string, opts: { estimateOn
   const p = getProduction(db, projectId);
   if (!m || !p) return { ok: false, reason: "provider_error", message: "Project not found" };
   const hook = opts.hook?.trim() || p.docs.hook || "";
-  const user = [styleBlock(db, { preset: opts.preset }), itemBlock(p), hook ? `OPENING HOOK (chosen by the creator): ${hook}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 45000)].filter(Boolean).join("\n\n");
+  const user = [styleBlock(db, { preset: opts.preset, dials: projectDials(p) }), itemBlock(p), hook ? `OPENING HOOK (chosen by the creator): ${hook}` : "", opts.direction ? `CREATOR'S DIRECTION: ${opts.direction}` : "", truncate(m.text, 45000)].filter(Boolean).join("\n\n");
   const task = {
     task: "script.outline",
     system: `${WRITER}
@@ -131,7 +140,7 @@ export async function writeScript(db: DB, projectId: string, opts: { estimateOnl
   if (!m || !p) return { ok: false, reason: "provider_error", message: "Project not found" };
   const perf = performanceBrief(db);
   const user = [
-    styleBlock(db, { preset: opts.preset }),
+    styleBlock(db, { preset: opts.preset, dials: projectDials(p) }),
     itemBlock(p),
     p.docs.hook ? `OPEN WITH THIS HOOK (the creator chose it; you may tighten it): ${p.docs.hook}` : "",
     p.docs.outline?.trim() ? `FOLLOW THIS OUTLINE (the creator approved it):\n${p.docs.outline.trim()}` : "",
@@ -207,7 +216,7 @@ export async function rewriteSelection(
   if (!p) return { ok: false, reason: "provider_error", message: "Project not found" };
   if (!opts.selection?.trim()) return { ok: false, reason: "provider_error", message: "Select some text in the script first" };
   const user = [
-    styleBlock(db, { preset: opts.preset }),
+    styleBlock(db, { preset: opts.preset, dials: projectDials(p) }),
     `THE WHOLE SCRIPT (for context only):\n${truncate(p.docs.script ?? "", 12000)}`,
     `PASSAGE TO REWRITE:\n${opts.selection.trim()}`,
     `HOW: ${opts.instruction}`,
@@ -245,7 +254,7 @@ export async function packageContent(db: DB, projectId: string, opts: { estimate
   const m = material(db, projectId);
   if (!p || !m) return { ok: false, reason: "provider_error", message: "Project not found" };
   const base = p.docs.script?.trim() ? `SCRIPT:\n${truncate(p.docs.script, 16000)}` : `NO SCRIPT YET — work from the research:\n${truncate(m.text, 16000)}`;
-  const user = [styleBlock(db), itemBlock(p), `WORKING TITLE: ${p.title}`, base].join("\n\n");
+  const user = [styleBlock(db, { dials: projectDials(p) }), itemBlock(p), `WORKING TITLE: ${p.title}`, base].join("\n\n");
   const task = {
     task: "package.content",
     system: `You are the producer and packaging lead for this creator. Captions, titles and hooks must sound like them (see their voice guide and dials), not like a brand account. From the script, produce:

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "./api";
 import { AiButton } from "./AiButton";
 import { ScriptWorkbench } from "./ScriptWorkbench";
+import type { Dials, Preset } from "@/lib/voice-shared";
 import { CONTENT_TYPES, DOC_KEYS, PLATFORMS, PROD_STAGES, progressOf, type Production, type ProductionDocs } from "@/lib/production-shared";
 
 const DOC_LABEL: Record<(typeof DOC_KEYS)[number], string> = { script: "Script", shots: "Shot list", thumbnail: "Thumbnail & titles", cutdowns: "Cut-downs", captions: "Captions" };
@@ -18,7 +19,7 @@ const DOC_HINT: Record<(typeof DOC_KEYS)[number], string> = {
 const PLATFORM_LABEL: Record<string, string> = { youtube: "YouTube", instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok" };
 
 /** The content side of a project: type, stage, date, platforms, and the working documents. */
-export function ProductionPanel({ initial, presets = [] }: { initial: Production; presets?: string[] }) {
+export function ProductionPanel({ initial, presets = [], voice }: { initial: Production; presets?: string[]; voice?: { dials: Dials; presets: Preset[] } }) {
   const router = useRouter();
   const [p, setP] = useState(initial);
   const [tab, setTab] = useState<(typeof DOC_KEYS)[number]>("script");
@@ -97,7 +98,7 @@ export function ProductionPanel({ initial, presets = [] }: { initial: Production
       <div className="p-4">
         <p className="mb-2 text-[12.5px] text-muted">{DOC_HINT[tab]}</p>
         {tab === "script" ? (
-          <ScriptWorkbench key={p.updatedAt.slice(0, 16)} p={p} presets={presets} onProduction={(prod) => { setP(prod); setDraft(prod.docs); router.refresh(); }} />
+          <ScriptWorkbench key={p.updatedAt.slice(0, 16)} p={p} presets={presets} voice={voice} onProduction={(prod) => { setP(prod); setDraft(prod.docs); router.refresh(); }} />
         ) : (
           <>
             <div className="mb-3 flex flex-wrap items-center gap-2">

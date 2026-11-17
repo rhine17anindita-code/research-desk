@@ -760,4 +760,32 @@ CREATE TABLE translations (
 );
 `,
   },
+  {
+    id: 18,
+    name: "monetise",
+    sql: `
+-- Monetisation: the creator's own editable library (seeded from the built-in playbook), sponsors, series and proposals.
+CREATE TABLE mon_items (
+  id TEXT PRIMARY KEY, channel_id TEXT, kind TEXT NOT NULL, title TEXT NOT NULL, how TEXT NOT NULL DEFAULT '', example TEXT NOT NULL DEFAULT '',
+  formats TEXT NOT NULL DEFAULT '[]', goals TEXT NOT NULL DEFAULT '[]', effort TEXT, sensitive_ok INTEGER NOT NULL DEFAULT 1,
+  source TEXT NOT NULL DEFAULT 'mine', starred INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE mon_sponsors (
+  id TEXT PRIMARY KEY, channel_id TEXT, name TEXT NOT NULL, category TEXT NOT NULL, fits TEXT NOT NULL DEFAULT '[]', notes TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'idea', contact TEXT NOT NULL DEFAULT '', last_contact TEXT, source TEXT NOT NULL DEFAULT 'mine',
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE mon_series (
+  id TEXT PRIMARY KEY, channel_id TEXT, name TEXT NOT NULL, premise TEXT NOT NULL DEFAULT '', episodes TEXT NOT NULL DEFAULT '[]', categories TEXT NOT NULL DEFAULT '[]',
+  format TEXT NOT NULL DEFAULT '', integration TEXT NOT NULL DEFAULT '', sentiment TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'idea',
+  source TEXT NOT NULL DEFAULT 'mine', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE mon_proposals (
+  id TEXT PRIMARY KEY, channel_id TEXT, sponsor_id TEXT, series_id TEXT, project_id TEXT, title TEXT NOT NULL, body TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft', price_low INTEGER, price_high INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+ALTER TABLE channels ADD COLUMN monetise TEXT NOT NULL DEFAULT '{}';
+`,
+  },
 ];

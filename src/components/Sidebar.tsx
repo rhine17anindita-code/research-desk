@@ -25,7 +25,10 @@ const NAV: { section: string; items: { href: string; label: string; icon: string
     { href: "/voice", label: "Voice Lab", icon: "edit" },
     { href: "/calendar", label: "Calendar", icon: "calendar" },
   ] },
-  { section: "Grow", items: [{ href: "/performance", label: "Performance", icon: "spark" }] },
+  { section: "Grow", items: [
+    { href: "/performance", label: "Performance", icon: "spark" },
+    { href: "/monetise", label: "Monetise", icon: "bookmark" },
+  ] },
   { section: "Set up", items: [
     { href: "/preferences", label: "Preferences", icon: "pin" },
     { href: "/settings", label: "Settings", icon: "settings" },

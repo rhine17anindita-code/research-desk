@@ -176,9 +176,10 @@ export function bannedHits(text: string, banned: string): string[] {
 // The style block every writing task uses
 // ---------------------------------------------------------------------------
 
-export function styleBlock(db: DB, opts: { preset?: string } = {}): string {
+export function styleBlock(db: DB, opts: { preset?: string; dials?: Dials | null } = {}): string {
   const p = getProfile(db);
-  const dials = (opts.preset && p.presets.find((x) => x.name === opts.preset)?.dials) || p.dials;
+  // This project's own dials win, then a chosen preset, then the channel's defaults.
+  const dials = { ...p.dials, ...((opts.preset && p.presets.find((x) => x.name === opts.preset)?.dials) || {}), ...(opts.dials ?? {}) };
   const mine = listVoiceSources(db).filter((s) => s.kind === "mine" && s.status === "ready" && s.text);
   const insp = listVoiceSources(db).filter((s) => s.kind === "inspiration" && s.status === "ready" && s.text);
   const blend = dials.blend ?? BLEND.def;

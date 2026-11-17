@@ -6,6 +6,7 @@ import { api } from "./api";
 import { Icon } from "./Icon";
 import { AiButton } from "./AiButton";
 import type { Production, ProductionDocs } from "@/lib/production-shared";
+import { BLEND, DIALS, type Dials, type Preset } from "@/lib/voice-shared";
 
 const REWRITES = ["Punchier", "More personal", "Simpler", "More Banglish", "Funnier", "More critical", "Shorter", "More emotional", "Sound more like me"];
 
@@ -13,7 +14,7 @@ const REWRITES = ["Punchier", "More personal", "Simpler", "More Banglish", "Funn
  * The Script tab: write in steps, in your voice.
  * 0 full articles (free) → 1 hooks → 2 outline → 3 draft → edit, and rewrite any selected passage.
  */
-export function ScriptWorkbench({ p, presets, onProduction }: { p: Production; presets: string[]; onProduction: (p: Production) => void }) {
+export function ScriptWorkbench({ p, presets, voice, onProduction }: { p: Production; presets: string[]; voice?: { dials: Dials; presets: Preset[] }; onProduction: (p: Production) => void }) {
   const [docs, setDocs] = useState<ProductionDocs>(p.docs);
   const [preset, setPreset] = useState("");
   const [direction, setDirection] = useState("");
@@ -46,6 +47,7 @@ export function ScriptWorkbench({ p, presets, onProduction }: { p: Production; p
           <option value="">Channel default dials</option>
           {presets.map((n) => <option key={n} value={n}>{n}</option>)}
         </select>
+        <ProjectDials docs={docs} voice={voice} preset={preset} onSave={(json) => { setDocs({ ...docs, dials: json }); saveDoc({ dials: json }); }} />
         <Link href="/voice" className="text-accent hover:underline">Voice Lab →</Link>
         <input className="input !w-full !py-1 text-[12.5px] sm:!w-80" value={direction} onChange={(e) => setDirection(e.target.value)} placeholder="Direction (optional): angle, tone, length, what to include…" />
       </div>
@@ -171,5 +173,44 @@ export function ScriptWorkbench({ p, presets, onProduction }: { p: Production; p
         />
       </div>
     </div>
+  );
+}
+
+/** This script's own dials: start from the channel (or the chosen preset), change anything for this piece only. */
+function ProjectDials({ docs, voice, preset, onSave }: { docs: ProductionDocs; voice?: { dials: Dials; presets: Preset[] }; preset: string; onSave: (json: string) => void }) {
+  const base = { ...(voice?.dials ?? {}), ...(voice?.presets.find((x) => x.name === preset)?.dials ?? {}) };
+  const own = (() => {
+    try {
+      return docs.dials ? (JSON.parse(docs.dials) as Dials) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const [open, setOpen] = useState(false);
+  const [d, setD] = useState<Dials>({ ...base, ...(own ?? {}) });
+  const commit = () => onSave(JSON.stringify(d));
+  return (
+    <span className="relative">
+      <button className={own ? "chip-accent" : "chip"} onClick={() => setOpen((o) => !o)}>{own ? "Dials: this script's own" : "Dials for this script"}</button>
+      {open && (
+        <div className="absolute left-0 top-8 z-20 w-[min(92vw,640px)] rounded-2xl border border-line bg-surface p-3 shadow-lg">
+          <div className="mb-2 flex items-center justify-between text-[12px]">
+            <span className="text-muted">Changes here apply to this project only. The channel&apos;s defaults stay as they are.</span>
+            <button className="btn-ghost !px-1 !text-[12px]" onClick={() => setOpen(false)}>Close</button>
+          </div>
+          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {[BLEND, ...DIALS].map((x) => (
+              <label key={x.id} className="block text-[11.5px]">
+                <div className="flex justify-between text-muted"><span>{x.left}</span><span>{x.right}</span></div>
+                <input type="range" min={0} max={100} value={d[x.id] ?? 50} onChange={(e) => setD({ ...d, [x.id]: Number(e.target.value) })} onMouseUp={commit} onTouchEnd={commit} onKeyUp={commit} className="w-full accent-[var(--color-accent)]" />
+              </label>
+            ))}
+          </div>
+          {own && (
+            <button className="btn mt-2 !py-1 !text-[12px]" onClick={() => { setD(base); onSave(""); }}>Back to the channel&apos;s dials</button>
+          )}
+        </div>
+      )}
+    </span>
   );
 }
