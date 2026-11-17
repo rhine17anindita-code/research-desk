@@ -99,6 +99,8 @@ const coolingDown = () => { try { return Date.now() < Number(fs.readFileSync(COO
 const PER_RUN = 12; // a few at a time, every 10 minutes, newest first — steady and under YouTube's radar
 
 async function runSite() {
+  // Nudge the site's own feed schedule awake (hosting can pause an idle server).
+  await call("/api/helper/wake").catch(() => null);
   const { jobs, media: mediaJobs = [], pages = [], translate = [] } = await call("/api/helper/jobs");
   let done = 0;
   for (const job of coolingDown() ? [] : jobs.slice(0, PER_RUN)) {
