@@ -26,28 +26,33 @@ export async function referenceVideos(db: DB, limit = 10): Promise<CreatorVideo[
     )
     .all(activeChannelId(db)) as { title: string; url: string; publisher: string; published_at: string | null; image_url: string | null }[];
   const ids = rows.map((r) => youtubeId(r.url)).filter((x): x is string => !!x);
-  let stats = new Map<string, { views: number }>();
+  let stats = new Map<string, { views: number; seconds: number | null }>();
   try {
     stats = await videoStats(ids.slice(0, 50));
     if (ids.length > 50) for (const [k, v] of await videoStats(ids.slice(50, 100))) stats.set(k, v);
   } catch {
     /* no key or quota: show without numbers */
   }
-  const vids: CreatorVideo[] = rows.map((r) => {
+  // Shorts (≤ 3 min) are a different game: leave them out so long-form breakouts are measured fairly.
+  const isShort = (r: { url: string }) => { const id = youtubeId(r.url); const sec = id ? stats.get(id)?.seconds : null; return r.url.includes("/shorts/") || (sec != null && sec <= 180); };
+  const vids: CreatorVideo[] = rows.filter((r) => !isShort(r)).map((r) => {
     const id = youtubeId(r.url);
     const v = id ? stats.get(id) : undefined;
     const days = r.published_at ? Math.max(1, (Date.now() - new Date(r.published_at).getTime()) / 86_400_000) : null;
     return { title: r.title, url: r.url, channel: r.publisher, publishedAt: r.published_at, thumbnail: r.image_url, views: v?.views ?? null, viewsPerDay: v && days ? v.views / days : null, breakout: null };
   });
-  // Breakout = this video's views/day versus the median of the same channel's recent videos.
-  const byChannel = new Map<string, number[]>();
-  for (const v of vids) if (v.viewsPerDay != null) (byChannel.get(v.channel) ?? byChannel.set(v.channel, []).get(v.channel)!).push(v.viewsPerDay);
+  // Breakout = this video's total views versus the channel's typical (median) video that is at least
+  // a week old. Views/day overstated new uploads, which collect most of their views in the first days.
+  // A fresh video already beating the typical settled video is a genuine breakout.
+  const ageDays = (v: CreatorVideo) => (v.publishedAt ? (Date.now() - new Date(v.publishedAt).getTime()) / 86_400_000 : 0);
+  const mature = new Map<string, number[]>();
+  for (const v of vids) if (v.views != null && ageDays(v) >= 7) (mature.get(v.channel) ?? mature.set(v.channel, []).get(v.channel)!).push(v.views);
   for (const v of vids) {
-    const arr = byChannel.get(v.channel);
-    if (v.viewsPerDay == null || !arr || arr.length < 3) continue;
+    const arr = mature.get(v.channel);
+    if (v.views == null || !arr || arr.length < 3) continue;
     const sorted = [...arr].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
-    v.breakout = median > 0 ? v.viewsPerDay / median : null;
+    v.breakout = median > 0 ? v.views / median : null;
   }
   const hasStats = vids.some((v) => v.views != null);
   const ranked = hasStats ? [...vids].sort((a, b) => (b.breakout ?? 0) - (a.breakout ?? 0) || (b.viewsPerDay ?? 0) - (a.viewsPerDay ?? 0)) : vids;

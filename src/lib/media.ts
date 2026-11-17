@@ -127,20 +127,26 @@ export async function youtubeChannelFeed(input: string): Promise<{ url: string; 
 }
 
 /** View/like/comment counts for up to 50 YouTube video ids (1 quota unit). Empty without a key. */
-export async function videoStats(ids: string[]): Promise<Map<string, { views: number; likes: number; comments: number }>> {
-  const out = new Map<string, { views: number; likes: number; comments: number }>();
+export async function videoStats(ids: string[]): Promise<Map<string, { views: number; likes: number; comments: number; seconds: number | null }>> {
+  const out = new Map<string, { views: number; likes: number; comments: number; seconds: number | null }>();
   if (!youtubeConfigured() || !ids.length) return out;
   const key = `s:${ids.slice(0, 50).join(",")}`;
   const hit = statsCache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const j = await json<{ items?: { id: string; statistics?: { viewCount?: string; likeCount?: string; commentCount?: string } }[] }>(
-    `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ids.slice(0, 50).join(",")}&key=${encodeURIComponent(process.env.YOUTUBE_API_KEY!)}`,
+  const j = await json<{ items?: { id: string; statistics?: { viewCount?: string; likeCount?: string; commentCount?: string }; contentDetails?: { duration?: string } }[] }>(
+    `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${ids.slice(0, 50).join(",")}&key=${encodeURIComponent(process.env.YOUTUBE_API_KEY!)}`,
   );
-  for (const v of j.items ?? []) out.set(v.id, { views: Number(v.statistics?.viewCount ?? 0), likes: Number(v.statistics?.likeCount ?? 0), comments: Number(v.statistics?.commentCount ?? 0) });
+  for (const v of j.items ?? []) out.set(v.id, { views: Number(v.statistics?.viewCount ?? 0), likes: Number(v.statistics?.likeCount ?? 0), comments: Number(v.statistics?.commentCount ?? 0), seconds: isoSeconds(v.contentDetails?.duration) });
   statsCache.set(key, { at: Date.now(), data: out });
   return out;
 }
-const statsCache = new Map<string, { at: number; data: Map<string, { views: number; likes: number; comments: number }> }>();
+const statsCache = new Map<string, { at: number; data: Map<string, { views: number; likes: number; comments: number; seconds: number | null }> }>();
+
+/** "PT1H2M3S" → 3723. */
+export function isoSeconds(d: string | undefined): number | null {
+  const m = d?.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  return m ? (+(m[1] ?? 0)) * 86400 + (+(m[2] ?? 0)) * 3600 + (+(m[3] ?? 0)) * 60 + (+(m[4] ?? 0)) : null;
+}
 
 export function youtubeId(url: string): string | null {
   return url.match(/[?&]v=([\w-]{11})/)?.[1] ?? url.match(/youtu\.be\/([\w-]{11})/)?.[1] ?? url.match(/shorts\/([\w-]{11})/)?.[1] ?? null;
