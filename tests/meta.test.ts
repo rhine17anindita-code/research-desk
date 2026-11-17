@@ -16,7 +16,7 @@ function fakeGraph(h: Handler) {
 
 const userToken: Handler = (path, q) => {
   if (path === "me") return q.get("fields")?.includes("instagram_business_account") ? { error: { message: "(#100) Tried accessing nonexisting field (instagram_business_account) on node type (User)", code: 100 } } : { id: "u1", name: "Anindita" };
-  if (path === "debug_token") return { data: { is_valid: true, expires_at: Math.floor(Date.now() / 1000) + 50 * 86400, scopes: ["pages_show_list", "pages_read_engagement", "read_insights", "instagram_basic", "instagram_manage_insights", "instagram_manage_comments"] } };
+  if (path === "debug_token") return { data: { type: "USER", is_valid: true, expires_at: Math.floor(Date.now() / 1000) + 50 * 86400, scopes: ["pages_show_list", "pages_read_engagement", "read_insights", "instagram_basic", "instagram_manage_insights", "instagram_manage_comments"] } };
   if (path === "me/accounts") return { data: [{ id: "p1", name: "Anindita Rhine", access_token: "PAGE_TOKEN", instagram_business_account: { id: "ig1", username: "anindita.rhine" } }] };
   if (path === "ig1") return { followers_count: 5400, media_count: 2 };
   if (path === "ig1/media")
@@ -86,7 +86,7 @@ describe("direct Meta connection", () => {
     process.env.META_ACCESS_TOKEN = "PAGE_TOKEN";
     fakeGraph((path, q) => {
       if (path === "me") return { id: "p1", name: "Anindita Rhine", instagram_business_account: { id: "ig1", username: "anindita.rhine" } };
-      if (path === "debug_token") return { data: { is_valid: true, expires_at: 0, scopes: [] } };
+      if (path === "debug_token") return { data: { type: "PAGE", is_valid: true, expires_at: 0, scopes: [] } };
       return userToken(path, q);
     });
     const s = await metaStatus(freshDb());

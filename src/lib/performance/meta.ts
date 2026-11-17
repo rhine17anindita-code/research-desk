@@ -71,15 +71,12 @@ export interface MetaStatus {
 
 /** Which Page (and its linked Instagram account) to use. A Page token is the Page itself. */
 async function resolvePage(db: DB): Promise<{ page: PageInfo | null; pages: { id: string; name: string }[]; kind: "user" | "page" }> {
-  // A Page token answers /me as the Page, which has an instagram_business_account field; a user token errors on it.
-  try {
-    const asPage = await graph<{ id: string; name: string; instagram_business_account?: { id: string; username?: string } }>("me", { fields: "id,name,instagram_business_account{id,username}" });
-    if (asPage.instagram_business_account !== undefined || (await isPage(asPage.id))) {
-      const ig = asPage.instagram_business_account;
-      return { page: { id: asPage.id, name: asPage.name, token: token(), ig: ig ? { id: ig.id, username: ig.username ?? "" } : null }, pages: [{ id: asPage.id, name: asPage.name }], kind: "page" };
-    }
-  } catch {
-    /* a user token: the instagram field doesn't exist on users */
+  // Meta says what kind of token it is; a Page token is the Page itself (its /me is the Page).
+  const kind = (await graph<{ data?: { type?: string } }>("debug_token", { input_token: token() })).data?.type;
+  if (kind === "PAGE") {
+    const pg = await graph<{ id: string; name: string; instagram_business_account?: { id: string; username?: string } }>("me", { fields: "id,name,instagram_business_account{id,username}" });
+    const ig = pg.instagram_business_account;
+    return { page: { id: pg.id, name: pg.name, token: token(), ig: ig ? { id: ig.id, username: ig.username ?? "" } : null }, pages: [{ id: pg.id, name: pg.name }], kind: "page" };
   }
   const accounts = await all<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }>(
     "me/accounts", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "50" }, 100,
@@ -96,14 +93,6 @@ async function resolvePage(db: DB): Promise<{ page: PageInfo | null; pages: { id
     page: pick ? { id: pick.id, name: pick.name, token: pick.access_token, ig: pick.instagram_business_account ? { id: pick.instagram_business_account.id, username: pick.instagram_business_account.username ?? "" } : null } : null,
     pages, kind: "user",
   };
-}
-async function isPage(id: string): Promise<boolean> {
-  try {
-    const j = await graph<{ metadata?: { type?: string } }>(id, { metadata: "1", fields: "id" });
-    return j.metadata?.type === "page";
-  } catch {
-    return false;
-  }
 }
 
 export async function metaStatus(db: DB): Promise<MetaStatus> {
