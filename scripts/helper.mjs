@@ -92,7 +92,7 @@ async function media(job) {
 }
 
 async function runSite() {
-  const { jobs, media: mediaJobs = [] } = await call("/api/helper/jobs");
+  const { jobs, media: mediaJobs = [], pages = [] } = await call("/api/helper/jobs");
   let done = 0;
   for (const job of jobs) {
     try {
@@ -115,7 +115,20 @@ async function runSite() {
       log("video failed", job.url, e.message);
     }
   }
-  log(`${SITE}: ${done}/${jobs.length} transcripts, ${vids}/${mediaJobs.length} videos`);
+  let read = 0;
+  for (const p of pages) {
+    try {
+      const r = await fetch(p.url, { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36", Accept: "text/html" }, signal: AbortSignal.timeout(20000), redirect: "follow" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const html = (await r.text()).slice(0, 3_000_000);
+      await call("/api/helper/page", { method: "POST", body: JSON.stringify({ id: p.id, html }) });
+      read++;
+    } catch (e) {
+      // Refused from home too: it's a paywall or a hard block, so keep the summary.
+      await call("/api/helper/page", { method: "POST", body: JSON.stringify({ id: p.id, status: "summary" }) }).catch(() => {});
+    }
+  }
+  log(`${SITE}: ${done}/${jobs.length} transcripts, ${vids}/${mediaJobs.length} videos, ${read}/${pages.length} news pages`);
 }
 
 async function run() {

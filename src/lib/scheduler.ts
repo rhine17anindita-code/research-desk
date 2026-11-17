@@ -35,6 +35,10 @@ export function startScheduler() {
       const r = await ingestFeeds(db, { trigger: "scheduled" });
       console.log(`[scheduler] ingest: +${r.articlesNew} articles, ${r.clustersNew} new stories, ${r.feedsFailed} feed errors`);
       db.prepare("DELETE FROM ai_cache WHERE created_at < datetime('now', '-90 days')").run();
+      // Full articles for the stories that matter (free).
+      const { fetchFullText } = await import("./ingest/fulltext");
+      const ft = await fetchFullText(db, 120).catch(() => null);
+      if (ft) console.log(`[scheduler] full text: ${ft.full} full, ${ft.summary} summary, ${ft.headline} headline-only, ${ft.blocked} for the helper`);
       // The creator's own YouTube numbers and comments, every 6 hours.
       const { syncYoutubeIfStale } = await import("./performance/youtube-sync");
       await syncYoutubeIfStale(db, 6);

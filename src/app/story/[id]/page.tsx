@@ -22,6 +22,14 @@ import { StoryShell } from "@/components/StoryShell";
 import { MediaPanel } from "@/components/MediaPanel";
 import { fmtDate, timeAgo } from "@/lib/format";
 
+/** How much of each article the app could read (what research and scripts work from). */
+const TEXT_LABEL: Record<string, [string, string]> = {
+  full: ["full article", "bg-ok-soft text-ok"],
+  summary: ["short page (video, live update or paywall)", "bg-warn-soft text-warn"],
+  headline: ["headline only", "bg-surface-2 text-muted"],
+  blocked: ["fetching from your Mac…", "bg-accent-soft text-accent"],
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function StoryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -127,8 +135,11 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
               {articles.map((a) => (
                 <li key={a.id} className="relative">
                   <span className="absolute -left-[18px] top-1.5 h-2 w-2 rounded-full border border-line-strong bg-surface" />
-                  <div className="text-[11.5px] text-muted">{a.publisher} · {fmtDate(a.publishedAt ?? a.fetchedAt, true)}</div>
-                  <a href={a.url} target="_blank" rel="noreferrer" className="block text-[13px] font-medium leading-snug text-ink hover:underline">
+                  <div className="text-[11.5px] text-muted">
+                    {a.publisher} · {fmtDate(a.publishedAt ?? a.fetchedAt, true)}
+                    {a.textStatus && TEXT_LABEL[a.textStatus] && <span className={`ml-1.5 rounded-full px-1.5 py-px text-[10.5px] font-medium ${TEXT_LABEL[a.textStatus][1]}`}>{TEXT_LABEL[a.textStatus][0]}</span>}
+                  </div>
+                  <a href={a.directUrl || a.url} target="_blank" rel="noreferrer" className="block text-[13px] font-medium leading-snug text-ink hover:underline">
                     {a.title} <Icon name="external" size={11} className="inline text-muted" />
                   </a>
                   {a.summary && <p className="mt-0.5 line-clamp-3 text-[12.5px] leading-relaxed text-ink-2">{a.summary}</p>}

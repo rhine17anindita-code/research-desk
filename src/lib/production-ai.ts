@@ -52,6 +52,8 @@ function itemBlock(p: Production): string {
 // ---------------------------------------------------------------------------
 
 export async function deepenSources(db: DB, projectId: string): Promise<{ checked: number; deepened: number }> {
+  const { fetchFullText } = await import("./ingest/fulltext");
+  await fetchFullText(db, 40).catch(() => null); // includes every story in a project
   return deepenSourceList(db, projectSources(db, projectId));
 }
 

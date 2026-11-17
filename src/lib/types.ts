@@ -17,6 +17,9 @@ export interface Article {
   imageUrl: string | null;
   entities: string[];
   isSample: boolean;
+  /** full | summary | headline | blocked | failed — how much of the article the app could read. */
+  textStatus?: string | null;
+  directUrl?: string | null;
 }
 
 export interface StoryBrief {

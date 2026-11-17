@@ -35,5 +35,7 @@ export const POST = route(async (req: Request) => {
     return { ok: true, message: [yt ? `${yt.videos} YouTube videos` : "", meta ? `${meta.instagram} Instagram, ${meta.facebook} Facebook posts` : ""].filter(Boolean).join(" · ") || "Nothing to sync for this channel" };
   }
   const r = await ingestFeeds(db, { trigger: "manual" });
+  const { fetchFullText } = await import("@/lib/ingest/fulltext");
+  await fetchFullText(db, 30).catch(() => null);
   return { ok: true, message: `${r.articlesNew} new item${r.articlesNew === 1 ? "" : "s"}, ${r.clustersNew} new stor${r.clustersNew === 1 ? "y" : "ies"}` };
 });

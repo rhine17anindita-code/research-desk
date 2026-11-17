@@ -734,4 +734,15 @@ ALTER TABLE clusters ADD COLUMN note TEXT;
 ALTER TABLE channels ADD COLUMN prefs TEXT NOT NULL DEFAULT '{}';
 `,
   },
+  {
+    id: 16,
+    name: "full-text",
+    sql: `
+-- Full article text for stories that matter, read once after each refresh.
+ALTER TABLE articles ADD COLUMN full_text TEXT;
+ALTER TABLE articles ADD COLUMN text_status TEXT;   -- full | summary (paywalled/short) | headline (Google News only) | blocked (helper retries) | failed
+ALTER TABLE articles ADD COLUMN direct_url TEXT;    -- the outlet's own link, for Google News items matched to a direct article
+CREATE INDEX idx_articles_text_status ON articles(text_status);
+`,
+  },
 ];

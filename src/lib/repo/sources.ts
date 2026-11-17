@@ -60,13 +60,21 @@ export function upsertSource(db: DB, input: SourceInput): Source {
 
 /** Every ingested article can act as a source; create its record on first use. */
 export function sourceForArticle(db: DB, articleId: string): Source | null {
+  // The full article text (when the app could read it) beats the feed's description.
+  const full = (db.prepare("SELECT full_text, direct_url FROM articles WHERE id = ?").get(articleId) as { full_text: string | null; direct_url: string | null } | undefined) ?? { full_text: null, direct_url: null };
   const existing = db.prepare("SELECT * FROM sources WHERE article_id = ?").get(articleId) as SourceRow | undefined;
-  if (existing) return mapSource(existing);
+  if (existing) {
+    if (full.full_text && (existing.excerpt?.length ?? 0) < full.full_text.length) {
+      db.prepare("UPDATE sources SET excerpt = ?, updated_at = ? WHERE id = ?").run(full.full_text, nowIso(), existing.id);
+      return getSource(db, existing.id);
+    }
+    return mapSource(existing);
+  }
   const a = getArticle(db, articleId);
   if (!a) return null;
   return upsertSource(db, {
-    kind: "news", title: a.title, authors: a.author, publisher: a.publisher, publishedAt: a.publishedAt, url: a.url,
-    excerpt: a.summary, provider: "feed", articleId: a.id,
+    kind: "news", title: a.title, authors: a.author, publisher: a.publisher, publishedAt: a.publishedAt, url: full.direct_url || a.url,
+    excerpt: full.full_text || a.summary, provider: "feed", articleId: a.id,
   });
 }
 

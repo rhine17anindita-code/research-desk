@@ -15,11 +15,12 @@ export interface FeedSeed {
  * occasionally; failures are recorded per feed and shown in Settings → Sources,
  * where feeds can be disabled, replaced, or removed.
  *
- * Only headline, link, date and the publisher-provided description are stored.
- * Full article text is never scraped.
+ * Feeds give headline, link, date and the publisher's description. For stories that matter
+ * (top and in-focus stories, projects, your research) the app also reads the full article
+ * once and keeps it privately for research and writing; it is never republished.
  */
 /** Bump when DEFAULT_FEEDS gains entries, so existing installations receive them once. */
-export const FEED_CATALOG_VERSION = 5;
+export const FEED_CATALOG_VERSION = 6;
 
 export function googleNewsTopicUrl(query: string): string {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -49,6 +50,13 @@ export const DEFAULT_FEEDS: FeedSeed[] = [
   { name: "ABC News (Australia)", url: "https://www.abc.net.au/news/feed/2942460/rss.xml", siteUrl: "https://www.abc.net.au/news", region: "Oceania", category: "regional" },
   { name: "AllAfrica — Latest", url: "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf", siteUrl: "https://allafrica.com", region: "Africa", category: "regional" },
   { name: "Dhaka Tribune", url: "https://www.dhakatribune.com/feed/", siteUrl: "https://www.dhakatribune.com", region: "South Asia", category: "regional" },
+  // Direct feeds for outlets that used to arrive only through Google News (full articles, clean links).
+  { name: "The Daily Star — Bangladesh", url: "https://www.thedailystar.net/news/bangladesh/rss.xml", siteUrl: "https://www.thedailystar.net", region: "South Asia", category: "regional" },
+  { name: "Prothom Alo English", url: "https://en.prothomalo.com/feed/", siteUrl: "https://en.prothomalo.com", region: "South Asia", category: "regional" },
+  { name: "The Hindu — National", url: "https://www.thehindu.com/news/national/feeder/default.rss", siteUrl: "https://www.thehindu.com", region: "South Asia", category: "regional" },
+  { name: "Times of India — World", url: "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms", siteUrl: "https://timesofindia.indiatimes.com", region: "South Asia", category: "international" },
+  { name: "Hindustan Times — World", url: "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml", siteUrl: "https://www.hindustantimes.com", region: "South Asia", category: "international" },
+  { name: "The Indian Express — World", url: "https://indianexpress.com/section/world/feed/", siteUrl: "https://indianexpress.com", region: "South Asia", category: "international" },
   { name: "The Business Standard (Bangladesh)", url: "https://www.tbsnews.net/bangladesh/rss.xml", siteUrl: "https://www.tbsnews.net", region: "South Asia", category: "regional" },
   { name: "The Business Standard — Economy", url: "https://www.tbsnews.net/economy/rss.xml", siteUrl: "https://www.tbsnews.net", region: "South Asia", category: "regional" },
   { name: "Scroll.in", url: "https://feeds.feedburner.com/ScrollinArticles.rss", siteUrl: "https://scroll.in", region: "South Asia", category: "regional" },

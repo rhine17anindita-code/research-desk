@@ -34,5 +34,7 @@ export const GET = route((req: Request) => {
     ...(db.prepare("SELECT id, url FROM voice_sources WHERE status = 'queued' AND url IS NOT NULL ORDER BY created_at LIMIT 15").all() as { id: string; url: string }[]).map((r) => ({ type: "voice", ...r })),
     ...(db.prepare("SELECT id, url FROM research_items WHERE media_status = 'queued' AND url IS NOT NULL ORDER BY created_at LIMIT 10").all() as { id: string; url: string }[]).map((r) => ({ type: "research", ...r })),
   ];
-  return { ok: true, jobs, media };
+  // News pages this server was refused: the helper reads them from home internet.
+  const pages = db.prepare("SELECT id, url FROM articles WHERE text_status = 'blocked' ORDER BY fetched_at DESC LIMIT 25").all() as { id: string; url: string }[];
+  return { ok: true, jobs, media, pages };
 });

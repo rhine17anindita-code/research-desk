@@ -32,13 +32,14 @@ export function mapStory(r: ClusterRow): Story {
 interface ArticleRow {
   id: string; feed_id: string | null; cluster_id: string | null; url: string; title: string; summary: string | null; author: string | null;
   publisher: string | null; published_at: string | null; fetched_at: string; region: string | null; image_url: string | null; entities: string; is_sample: number;
+  text_status?: string | null; direct_url?: string | null;
 }
 
 export function mapArticle(r: ArticleRow): Article {
   return {
     id: r.id, feedId: r.feed_id, clusterId: r.cluster_id, url: r.url, title: r.title, summary: r.summary, author: r.author,
     publisher: r.publisher, publishedAt: r.published_at, fetchedAt: r.fetched_at, region: r.region, imageUrl: r.image_url,
-    entities: parseJson(r.entities, []), isSample: !!r.is_sample,
+    entities: parseJson(r.entities, []), isSample: !!r.is_sample, textStatus: r.text_status ?? null, directUrl: r.direct_url ?? null,
   };
 }
 
