@@ -15,6 +15,7 @@ GLOSSARY = {
     "তারেক রহমান": "Tarique Rahman", "তারেক": "Tarique", "ইউনূস": "Yunus", "ইউনুস": "Yunus", "হাসিনা": "Hasina",
     "শেখ মুজিব": "Sheikh Mujib", "খালেদা জিয়া": "Khaleda Zia", "জিয়াউর রহমান": "Ziaur Rahman", "মির্জা ফখরুল": "Mirza Fakhrul",
     "বিএনপি": "BNP", "জামায়াতে ইসলামী": "Jamaat-e-Islami", "জামায়াত": "Jamaat", "আওয়ামী লীগ": "Awami League", "এনসিপি": "NCP",
+    "বিজিবি": "BGB", "বিএসএফ": "BSF", "সীমান্তরক্ষী বাহিনী": "border force", "সেনাবাহিনী": "army", "পুলিশ": "police",
     "শিবির": "Shibir", "ছাত্রলীগ": "Chhatra League", "ছাত্রদল": "Chhatra Dal", "র‍্যাব": "RAB", "ডিজিএফআই": "DGFI",
     "নাহিদ ইসলাম": "Nahid Islam", "আসিফ নজরুল": "Asif Nazrul", "পিনাকী": "Pinaki", "ইলিয়াস": "Elias",
     "ঢাকা": "Dhaka", "চট্টগ্রাম": "Chattogram", "সিলেট": "Sylhet", "রোহিঙ্গা": "Rohingya", "তিস্তা": "Teesta",
