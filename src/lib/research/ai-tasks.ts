@@ -389,7 +389,7 @@ export async function deepResearch(db: DB, questionId: string, opts: { estimateO
 
   if (opts.estimateOnly) {
     const a = estimateTaskCost(db, planTask);
-    const b = estimateTaskCost(db, { system: DEEP_SYSTEM, user: "x".repeat(140000), maxTokens: briefMaxTokens });
+    const b = estimateTaskCost(db, { task: "deep.brief", system: DEEP_SYSTEM, user: "x".repeat(140000), maxTokens: briefMaxTokens });
     return { estimate: { usd: a.usd + b.usd, model: a.model, inputTokens: a.inputTokens + b.inputTokens } };
   }
 

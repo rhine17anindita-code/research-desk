@@ -444,4 +444,33 @@ ALTER TABLE ideas ADD COLUMN pitch TEXT;       -- the user's own words
 ALTER TABLE ideas ADD COLUMN source_kind TEXT; -- news | trend | history | archive | statement | inspiration | pitch
 `,
   },
+  {
+    id: 4,
+    name: "channel-taste",
+    sql: `
+ALTER TABLE channels ADD COLUMN color TEXT NOT NULL DEFAULT 'coral';
+ALTER TABLE channels ADD COLUMN news_ratio INTEGER NOT NULL DEFAULT 60;      -- % of ideas tied to current news vs evergreen
+ALTER TABLE channels ADD COLUMN boost_terms TEXT NOT NULL DEFAULT '';        -- comma-separated people/topics to prioritise
+ALTER TABLE channels ADD COLUMN mute_terms TEXT NOT NULL DEFAULT '';         -- comma-separated people/topics to play down
+ALTER TABLE channels ADD COLUMN good_examples TEXT NOT NULL DEFAULT '';      -- ideas/titles the creator would jump on
+ALTER TABLE channels ADD COLUMN bad_examples TEXT NOT NULL DEFAULT '';       -- ideas that feel boring/obvious to them
+ALTER TABLE channels ADD COLUMN reference_creators TEXT NOT NULL DEFAULT ''; -- creators whose style to aim for
+
+UPDATE channels SET color = 'coral', news_ratio = 60,
+  boost_terms = 'Bangladesh, Dhaka, BNP, Jamaat, Awami League, Tarique Rahman, Yunus, Rohingya, Teesta, India, Pakistan, Myanmar',
+  mute_terms = 'Trump',
+  good_examples = 'Turkey''s president called Tarique Rahman "my beloved brother" and promised to do whatever Turkey can — but what can Turkey actually do for Bangladesh, and why does Erdogan want Bangladesh?
+GTA VI will increase food-delivery orders — and that will create a massive change for riders and platforms.
+Why are the countries behind the most damage in the world (Xi, Trump, Putin, maybe Kim Jong Un) talking about world peace?
+Nvidia''s Worst Nightmare Just Came True — and It''s Not Jensen Huang
+Can Japan''s Economy Afford Takaichi''s Big Bet?
+Why Do Muslims Flee to Europe Instead of Rich Arab Countries?',
+  bad_examples = 'Govt eases tender rules for deprived bidders under amended procurement law (procedural, nobody cares without an angle)
+Trump breaks silence about FAA nationwide ground stop, blames Biden administration (generic, not relevant to the audience)
+Hasina will return to Bangladesh in December (already widely known for months — only with a genuinely new angle)',
+  reference_creators = 'Johnny Harris, TLDR News, PeekTV, Warfronts, Dylan Page'
+WHERE id = 'ch_default';
+UPDATE channels SET color = 'teal', news_ratio = 40 WHERE id = 'ch_culture';
+`,
+  },
 ];

@@ -6,6 +6,7 @@ import { getAllSettings } from "../repo/settings";
 import { approxTokens, estimateCost } from "./pricing";
 import { AnthropicProvider, OpenAiCompatibleProvider } from "./providers";
 import type { AiProvider, AiResult, AiTask } from "./types";
+import { modelForTask } from "./task-models";
 
 /**
  * The single gateway for every model call in the app. It enforces, in order:
@@ -93,10 +94,17 @@ export function getAiStatus(db: DB): AiStatus {
   };
 }
 
-/** Worst-case cost estimate for a task before it runs (full max_tokens output). */
-export function estimateTaskCost(db: DB, task: Pick<AiTask<unknown>, "system" | "user" | "maxTokens" | "bulk">): { model: string; inputTokens: number; usd: number } {
+/** The model a task will use, honouring per-task choices (Anthropic) and the bulk model. */
+export function chooseModel(db: DB, task: { task?: string; bulk?: boolean }): string {
   const s = getAllSettings(db);
-  const model = task.bulk && s["ai.bulk_model"] ? s["ai.bulk_model"] : s["ai.model"];
+  const base = task.bulk && s["ai.bulk_model"] ? s["ai.bulk_model"] : s["ai.model"];
+  if (s["ai.provider"] !== "anthropic") return base;
+  return modelForTask(task.task, s["ai.task_models"] ?? {}, base);
+}
+
+/** Worst-case cost estimate for a task before it runs (full max_tokens output). */
+export function estimateTaskCost(db: DB, task: Pick<AiTask<unknown>, "system" | "user" | "maxTokens" | "bulk"> & { task?: string }): { model: string; inputTokens: number; usd: number } {
+  const model = chooseModel(db, task);
   const inputTokens = approxTokens(task.system + task.user) + 400;
   return { model, inputTokens, usd: estimateCost(model, inputTokens, task.maxTokens) };
 }
@@ -128,7 +136,7 @@ function extractJson(text: string): unknown {
 export async function runAiTask<T>(db: DB, task: AiTask<T>): Promise<AiResult<T>> {
   const s = getAllSettings(db);
   const provider = getProvider(db);
-  const model = task.bulk && s["ai.bulk_model"] ? s["ai.bulk_model"] : s["ai.model"];
+  const model = chooseModel(db, task);
 
   if (!s["ai.enabled"]) return { ok: false, reason: "disabled", message: "AI features are turned off in Settings → AI." };
   if (!provider.isConfigured())

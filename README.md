@@ -117,3 +117,10 @@ Typical costs with Opus 5.5 at medium effort are a few cents per action; Haiku 5
 ## Content and sources
 
 The app stores only what publishers put in their public RSS/Atom feeds (headline, link, date, description). It never scrapes article pages or paywalled content; always open the original via the links provided. Research metadata comes from the OpenAlex, Crossref, Wikipedia and GDELT public APIs exactly as returned.
+
+## Channel taste, sources and models (Phase 1)
+
+- **Settings → Channels**: per-channel colour, news/evergreen mix, "prioritise" and "play down" terms, good/bad example titles and reference creators. These steer ranking, untold stories, the statements radar and the AI idea prompt.
+- **Sources**: Bangladeshi TV and international news YouTube channels are followed by default. Reference creators (TLDR, Johnny Harris and others) feed "What creators are making" but never mix into news stories.
+- **YouTube key (optional, free)**: set `YOUTUBE_API_KEY` in `.env.local` (and in Hostinger's env vars) to show view counts, breakouts and related videos.
+- **Model per job**: Settings → AI lets you pick a model for each kind of task (ideas, writing, answers, light tagging).

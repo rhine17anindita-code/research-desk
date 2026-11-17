@@ -69,6 +69,13 @@ function imageOf(item: RawItem): string | null {
   return null;
 }
 
+/** Strip channel boilerplate (disclaimers, subscribe pleas, hashtags, links) from video descriptions. */
+export function cleanVideoBoilerplate(text: string): string {
+  const cut = text.search(/(fair use|disclaimer|copyright|subscribe|follow us|like our|join this channel|download|whatsapp|facebook\.com|https?:\/\/|#\S+\s+#\S+|সাবস্ক্রাইব|ভিডিওটি ভালো)/i);
+  const kept = (cut > 0 ? text.slice(0, cut) : cut === 0 ? "" : text).replace(/[|#=_\-\s]+$/, "").trim();
+  return kept.length >= 20 ? kept : "";
+}
+
 /** Parse RSS 2.0 / Atom / RSS 1.0 (RDF) text into normalised items. Malformed items are skipped. */
 export async function parseFeed(xml: string): Promise<FetchedFeed> {
   // Some publishers emit bare "&" in URLs/titles, which strict XML parsers reject.
@@ -83,7 +90,7 @@ export async function parseFeed(xml: string): Promise<FetchedFeed> {
     if (!url || !/^https?:\/\//.test(url) || !title) continue;
     const mgDesc = (raw.mediaGroup as { "media:description"?: unknown[] } | undefined)?.["media:description"]?.[0];
     const rawSummary = asText(raw.contentSnippet) || asText(raw.description) || asText(raw.summary) || asText(raw.content) || asText(mgDesc);
-    const summary = stripHtml(rawSummary);
+    const summary = cleanVideoBoilerplate(stripHtml(rawSummary));
     items.push({
       url,
       guid: guid || asText(raw.id) || null,

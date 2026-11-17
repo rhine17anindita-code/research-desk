@@ -114,8 +114,34 @@ export async function youtubeChannelFeed(input: string): Promise<{ url: string; 
     const res = await fetch(page, { headers: { "User-Agent": "Mozilla/5.0 (compatible; ResearchDesk/0.1)", "Accept-Language": "en" }, signal: AbortSignal.timeout(12000) });
     if (!res.ok) return null;
     const html = await res.text();
-    channelId = html.match(/"channelId":"(UC[\w-]{20,})"/)?.[1] ?? html.match(/channel\/(UC[\w-]{20,})/)?.[1] ?? null;
+    // Prefer the page's canonical/og URL (the channel itself) over IDs of other channels mentioned on the page.
+    channelId =
+      html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{20,})"/)?.[1] ??
+      html.match(/<meta property="og:url" content="https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{20,})"/)?.[1] ??
+      html.match(/"externalId":"(UC[\w-]{20,})"/)?.[1] ??
+      html.match(/"channelId":"(UC[\w-]{20,})"/)?.[1] ??
+      null;
     name = stripHtml(html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? "");
   }
   return channelId ? { url: `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, name: name || "YouTube channel" } : null;
+}
+
+/** View/like/comment counts for up to 50 YouTube video ids (1 quota unit). Empty without a key. */
+export async function videoStats(ids: string[]): Promise<Map<string, { views: number; likes: number; comments: number }>> {
+  const out = new Map<string, { views: number; likes: number; comments: number }>();
+  if (!youtubeConfigured() || !ids.length) return out;
+  const key = `s:${ids.slice(0, 50).join(",")}`;
+  const hit = statsCache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const j = await json<{ items?: { id: string; statistics?: { viewCount?: string; likeCount?: string; commentCount?: string } }[] }>(
+    `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ids.slice(0, 50).join(",")}&key=${encodeURIComponent(process.env.YOUTUBE_API_KEY!)}`,
+  );
+  for (const v of j.items ?? []) out.set(v.id, { views: Number(v.statistics?.viewCount ?? 0), likes: Number(v.statistics?.likeCount ?? 0), comments: Number(v.statistics?.commentCount ?? 0) });
+  statsCache.set(key, { at: Date.now(), data: out });
+  return out;
+}
+const statsCache = new Map<string, { at: number; data: Map<string, { views: number; likes: number; comments: number }> }>();
+
+export function youtubeId(url: string): string | null {
+  return url.match(/[?&]v=([\w-]{11})/)?.[1] ?? url.match(/youtu\.be\/([\w-]{11})/)?.[1] ?? url.match(/shorts\/([\w-]{11})/)?.[1] ?? null;
 }

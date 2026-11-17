@@ -10,6 +10,41 @@ import { timeAgo } from "@/lib/format";
 import type { Statement } from "@/lib/ideation/statements";
 import type { Opportunity } from "@/lib/ideation/opportunities";
 import type { Inspiration } from "@/lib/ideation/repo";
+import type { CreatorVideo } from "@/lib/ideation/creators";
+
+const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(Math.round(n)));
+
+export function CreatorsSection({ videos, hasKey }: { videos: CreatorVideo[]; hasKey: boolean }) {
+  return (
+    <Section title="What creators are making" hint={hasKey ? "Latest from your reference channels — breakouts first." : "Latest from your reference channels. Add the YouTube key to see views and breakouts."}>
+      <ul>
+        {videos.slice(0, 6).map((v) => (
+          <Expandable
+            key={v.url}
+            label="Make my version"
+            payload={{ focus: `Inspired by ${v.channel}'s video “${v.title}”${v.breakout && v.breakout > 1.5 ? ` (a breakout: ${v.breakout.toFixed(1)}× their usual views)` : ""}. Take what makes it work (topic type, curiosity gap, framing) and build ideas for THIS channel's audience from our own stories and research — not a copy.` }}
+          >
+            <a href={v.url} target="_blank" rel="noreferrer" className="flex gap-2.5">
+              {v.thumbnail && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={v.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-[52px] w-[92px] shrink-0 rounded-lg bg-surface-2 object-cover" />
+              )}
+              <span className="min-w-0">
+                <span className="line-clamp-2 text-[13px] font-medium leading-snug text-ink hover:underline">{v.title}</span>
+                <span className="mt-0.5 block text-[11.5px] text-muted">
+                  {v.channel}
+                  {v.views != null && ` · ${compact(v.views)} views`}
+                  {v.breakout != null && v.breakout >= 1.5 && <span className="ml-1 font-semibold text-accent">· {v.breakout.toFixed(1)}× breakout</span>}
+                </span>
+              </span>
+            </a>
+          </Expandable>
+        ))}
+        {!videos.length && <li className="text-[12.5px] text-muted">No recent videos yet — refresh feeds.</li>}
+      </ul>
+    </Section>
+  );
+}
 
 function Section({ title, hint, children, more }: { title: string; hint?: string; children: React.ReactNode; more?: { href: string; label: string } }) {
   return (

@@ -7,12 +7,14 @@ import { findOpportunities } from "@/lib/ideation/opportunities";
 import { findStatements } from "@/lib/ideation/statements";
 import { cachedPulse } from "@/lib/ideation/pulse";
 import { getAiStatus } from "@/lib/ai/service";
-import { IdeaDeck } from "@/components/ideas/IdeaDeck";
+import { IdeaGrid } from "@/components/studio/IdeaGrid";
 import { GeneratePanel } from "@/components/ideas/GeneratePanel";
 import { Composer } from "@/components/studio/Composer";
 import { Pipeline } from "@/components/studio/Pipeline";
 import { DailyTrigger } from "@/components/studio/DailyTrigger";
-import { InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
+import { CreatorsSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
+import { referenceVideos } from "@/lib/ideation/creators";
+import { youtubeConfigured } from "@/lib/media";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ export const dynamic = "force-dynamic";
  * ideas in the middle, pull from statements / untold stories / trends / inspiration
  * on the side, and keep everything you like in the pipeline below.
  */
-export default function StudioPage() {
+export default async function StudioPage() {
   const db = getDb();
   const ch = activeChannel(db);
   const score = (i: { packaging: { scores: { hook: number; massAppeal: number; novelty: number } } | null }) =>
@@ -36,7 +38,9 @@ export default function StudioPage() {
     <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="font-serif text-[28px] font-semibold tracking-tight">Studio</h1>
+          <h1 className="font-serif text-[30px] font-bold tracking-tight">
+            {new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening"} — <span className="text-accent">what are we making?</span>
+          </h1>
           <p className="text-[13px] text-muted">
             {ch.name} — find it, shape it, research it, script it.{" "}
             {!ch.profile.trim() && (
@@ -54,10 +58,10 @@ export default function StudioPage() {
           <section>
             <div className="mb-2 flex items-baseline justify-between">
               <h2 className="font-serif text-[20px] font-semibold">Ideas for you</h2>
-              <span className="text-[12px] text-muted">Best first · ← skip · → save · ↑ develop</span>
+              <span className="text-[12px] text-muted">{deck.length} waiting</span>
             </div>
             {deck.length ? (
-              <IdeaDeck initial={deck} backing={backing} />
+              <IdeaGrid initial={deck} backing={backing} />
             ) : (
               <div className="card px-6 py-6 text-center">
                 <p className="font-serif text-[18px] font-semibold">Start strong</p>
@@ -80,6 +84,7 @@ export default function StudioPage() {
         <aside className="space-y-4">
           <StatementsSection statements={findStatements(db, { limit: 10 })} />
           <UntoldSection opps={findOpportunities(db, { limit: 8 })} />
+          <CreatorsSection videos={await referenceVideos(db, 8)} hasKey={youtubeConfigured()} />
           <PulseSection trends={pulse?.trends ?? []} mostRead={pulse?.mostRead ?? []} onThisDay={pulse?.onThisDay ?? []} geo={ch.geo} />
           <InspirationSection items={listInspirations(db, 10)} />
           <Link href="/ideas/taste" className="block text-center text-[12.5px] text-accent hover:underline">What it has learned about this channel →</Link>

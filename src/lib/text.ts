@@ -55,11 +55,18 @@ export function truncate(s: string, n: number): string {
 
 /** Lowercased content tokens with light suffix stemming. */
 export function tokenize(text: string): string[] {
-  return (text.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").match(/[a-z0-9][a-z0-9'-]*[a-z0-9]|[a-z0-9]/g) ?? [])
+  // Latin text is accent-folded; other scripts (Bangla, Arabic, Devanagari…) are kept as-is.
+  const folded = text.toLowerCase().normalize("NFC").replace(/[a-zà-ÿ]+/g, (w) => w.normalize("NFKD").replace(/[̀-ͯ]/g, ""));
+  return (folded.match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}'-]*[\p{L}\p{M}\p{N}]|[\p{L}\p{N}]/gu) ?? [])
     .map((t) => t.replace(/'s$/, "").replace(/'/g, ""))
-    .filter((t) => t.length > 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t))
-    .map(stem);
+    .filter((t) => (/^[a-z0-9-]+$/.test(t) ? t.length > 2 && !STOPWORDS.has(t) && !/^\d+$/.test(t) : t.length > 1 && !BN_STOPWORDS.has(t)))
+    .map((t) => (/^[a-z]/.test(t) ? stem(t) : t));
 }
+
+/** Very common Bangla function words that should not make two headlines look alike. */
+const BN_STOPWORDS = new Set(
+  "এবং ও এ এই সেই যে যা কি কী না হয় হয়ে হবে হল হলো করে করা করেন করছে করতে থেকে জন্য সাথে সঙ্গে নিয়ে দিয়ে বলে বলেন বলেছেন আর তার তাদের এক একটি কাছে মধ্যে পর পরে আগে উপর লাইভ সংবাদ খবর".split(" "),
+);
 
 function stem(t: string): string {
   if (t.length > 5 && t.endsWith("ies")) return t.slice(0, -3) + "y";

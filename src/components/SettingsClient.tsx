@@ -392,7 +392,7 @@ interface Usage {
   cacheEntries: number;
 }
 
-export function AiSettings({ settings, status, models, usage }: { settings: AppSettings; status: AiStatus; models: { id: string; label: string; input: number; output: number }[]; usage: Usage }) {
+export function AiSettings({ settings, status, models, usage, taskGroups }: { settings: AppSettings; status: AiStatus; models: { id: string; label: string; input: number; output: number }[]; usage: Usage; taskGroups: { id: string; label: string; hint: string; defaultModel: string }[] }) {
   const router = useRouter();
   const [s, setS] = useState(settings);
   const [msg, setMsg] = useState<string | null>(null);
@@ -442,12 +442,37 @@ export function AiSettings({ settings, status, models, usage }: { settings: AppS
           {anthropic ? (
             <>
               <div>
-                <label className="label">Model for research tasks</label>
+                <label className="label">Model per job</label>
+                <div className="space-y-1.5 rounded-md border border-line p-2.5">
+                  {taskGroups.map((g) => (
+                    <div key={g.id} className="grid grid-cols-[1fr_auto] items-center gap-2">
+                      <div>
+                        <div className="text-[13px] font-medium text-ink">{g.label}</div>
+                        <div className="text-[11.5px] text-muted">{g.hint}</div>
+                      </div>
+                      <select
+                        className="input !w-auto !py-1 text-[12.5px]"
+                        value={s["ai.task_models"]?.[g.id] || g.defaultModel}
+                        onChange={(e) => {
+                          const next = { ...(s["ai.task_models"] ?? {}), [g.id]: e.target.value };
+                          setS({ ...s, "ai.task_models": next });
+                          void save({ "ai.task_models": next });
+                        }}
+                      >
+                        {models.map((m) => <option key={m.id} value={m.id}>{m.label.split(" — ")[0]}{m.id === g.defaultModel ? " (recommended)" : ""}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-[11.5px] text-muted">Opus = best quality · Sonnet ≈ half the cost · Haiku ≈ 1/40 of the cost.</p>
+              </div>
+              <div>
+                <label className="label">Default model for anything else</label>
                 <select className="input" value={s["ai.model"]} onChange={(e) => { setS({ ...s, "ai.model": e.target.value }); void save({ "ai.model": e.target.value }); }}>
                   {models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
                 </select>
               </div>
-              <div>
+              <div className="hidden">
                 <label className="label">Model for bulk story assessment (optional, cheaper)</label>
                 <select className="input" value={s["ai.bulk_model"]} onChange={(e) => { setS({ ...s, "ai.bulk_model": e.target.value }); void save({ "ai.bulk_model": e.target.value }); }}>
                   <option value="">Same as above</option>

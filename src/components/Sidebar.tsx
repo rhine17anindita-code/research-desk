@@ -19,7 +19,7 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
-export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number }; canSignOut?: boolean; channels: { list: { id: string; name: string }[]; active: string } }) {
+export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number }; canSignOut?: boolean; channels: { list: { id: string; name: string; color: string }[]; active: string } }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<RecentItem[]>([]);
@@ -74,8 +74,8 @@ export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean
           key={n.href}
           href={n.href}
           onClick={() => setOpen(false)}
-          className={`group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] transition-colors ${
-            active(n.href) ? "bg-surface text-ink shadow-[0_0_0_1px_var(--line)]" : "text-ink-2 hover:bg-surface-2 hover:text-ink"
+          className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13.5px] transition-all ${
+            active(n.href) ? "bg-accent-soft font-semibold text-accent" : "text-ink-2 hover:translate-x-0.5 hover:bg-surface-2 hover:text-ink"
           }`}
         >
           <Icon name={n.icon} size={17} className={active(n.href) ? "text-accent" : "text-muted group-hover:text-ink-2"} />
@@ -137,10 +137,12 @@ export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean
           <div className="mt-3">{status}<ThemeToggle />{signOut}</div>
         </div>
       )}
-      <aside className="sticky top-0 hidden h-screen w-[208px] shrink-0 flex-col justify-between overflow-y-auto border-r border-line px-3 py-4 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-[216px] shrink-0 flex-col justify-between overflow-y-auto border-r border-line bg-surface/60 px-3 py-4 backdrop-blur md:flex">
         <div>
           <Link href="/studio" className="mb-5 block px-2.5">
-            <div className="font-serif text-[18px] font-semibold leading-tight tracking-tight">Research Desk</div>
+            <div className="font-serif text-[20px] font-bold leading-tight tracking-tight">
+              Research<span className="text-accent">Desk</span>
+            </div>
             <div className="text-[11.5px] text-muted">Find it · shape it · prove it</div>
           </Link>
           <ChannelSwitcher channels={channels.list} active={channels.active} />

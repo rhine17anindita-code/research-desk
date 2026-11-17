@@ -27,6 +27,8 @@ export interface AppSettings {
   "taste.summary": string;
   "taste.updated_at": string;
   "channel.active": string;
+  /** Per task-group model overrides (group id → model id); empty = group default. */
+  "ai.task_models": Record<string, string>;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -55,4 +57,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "taste.summary": "",
   "taste.updated_at": "",
   "channel.active": "ch_default",
+  "ai.task_models": {},
 };

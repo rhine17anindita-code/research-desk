@@ -4,7 +4,7 @@ export interface FeedSeed {
   siteUrl?: string;
   region: string;
   language?: string;
-  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic" | "culture" | "video";
+  category: "international" | "regional" | "investigative" | "official" | "research" | "industry" | "science" | "analysis" | "topic" | "culture" | "video" | "reference";
   enabled?: boolean;
   /** Channels this feed belongs to by default (ids). Default: the news channel. */
   channels?: string[];
@@ -19,7 +19,7 @@ export interface FeedSeed {
  * Full article text is never scraped.
  */
 /** Bump when DEFAULT_FEEDS gains entries, so existing installations receive them once. */
-export const FEED_CATALOG_VERSION = 3;
+export const FEED_CATALOG_VERSION = 4;
 
 export function googleNewsTopicUrl(query: string): string {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -104,4 +104,31 @@ export const DEFAULT_FEEDS: FeedSeed[] = [
   { name: "The Hindu — Entertainment", url: "https://www.thehindu.com/entertainment/feeder/default.rss", region: "South Asia", category: "culture", channels: ["ch_culture"] },
   { name: "Publishers Weekly", url: "https://www.publishersweekly.com/pw/feeds/recent/index.xml", region: "Global", category: "culture", channels: ["ch_culture"] },
   { name: "Topic: Bangladeshi film & books", url: googleNewsTopicUrl('Bangladesh (film OR cinema OR novel OR author OR book)'), siteUrl: "https://news.google.com", region: "South Asia", category: "topic", channels: ["ch_culture"] },
+
+  // News channels on YouTube (videos as sources: titles, descriptions, thumbnails)
+  { name: "Jamuna TV (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCN6sm8iHiPd0cnoUardDAnw", siteUrl: "https://www.youtube.com/channel/UCN6sm8iHiPd0cnoUardDAnw", region: "South Asia", category: "video" },
+  { name: "Somoy TV (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCxHoBXkY88Tb8z1Ssj6CWsQ", siteUrl: "https://www.youtube.com/channel/UCxHoBXkY88Tb8z1Ssj6CWsQ", region: "South Asia", category: "video" },
+  { name: "Channel 24 (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCHLqIOMPk20w-6cFgkA90jw", siteUrl: "https://www.youtube.com/channel/UCHLqIOMPk20w-6cFgkA90jw", region: "South Asia", category: "video" },
+  { name: "Ekattor TV (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCtqvtAVmad5zywaziN6CbfA", siteUrl: "https://www.youtube.com/channel/UCtqvtAVmad5zywaziN6CbfA", region: "South Asia", category: "video" },
+  { name: "Independent Television (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCATUkaOHwO9EP_W87zCiPbA", siteUrl: "https://www.youtube.com/channel/UCATUkaOHwO9EP_W87zCiPbA", region: "South Asia", category: "video" },
+  { name: "Channel i (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCAz6rveBalVnE6qTmfQnvyQ", siteUrl: "https://www.youtube.com/channel/UCAz6rveBalVnE6qTmfQnvyQ", region: "South Asia", category: "video" },
+  { name: "RTV News (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC2P5Fd5g41Gtdqf0Uzh8Qaw", siteUrl: "https://www.youtube.com/channel/UC2P5Fd5g41Gtdqf0Uzh8Qaw", region: "South Asia", category: "video" },
+  { name: "The Business Standard (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUNEzmQ3zcifrhn0HwCgjYg", siteUrl: "https://www.youtube.com/channel/UCUNEzmQ3zcifrhn0HwCgjYg", region: "South Asia", category: "video" },
+  { name: "Dhaka Tribune (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCB58cDLM3zZlgV6iIG9bdoQ", siteUrl: "https://www.youtube.com/channel/UCB58cDLM3zZlgV6iIG9bdoQ", region: "South Asia", category: "video" },
+  { name: "DW News (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCknLrEdhRCp1aegoMqRaCZg", siteUrl: "https://www.youtube.com/channel/UCknLrEdhRCp1aegoMqRaCZg", region: "Global", category: "video" },
+  { name: "Al Jazeera English (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCNye-wNBqNL5ZzHSJj3l8Bg", siteUrl: "https://www.youtube.com/channel/UCNye-wNBqNL5ZzHSJj3l8Bg", region: "Middle East", category: "video" },
+  { name: "The Economist (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC0p5jTq6Xx_DosDFxVXnWaQ", siteUrl: "https://www.youtube.com/channel/UC0p5jTq6Xx_DosDFxVXnWaQ", region: "Global", category: "video" },
+  { name: "BBC News (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC16niRr50-MSBwiO3YDb3RA", siteUrl: "https://www.youtube.com/channel/UC16niRr50-MSBwiO3YDb3RA", region: "Global", category: "video" },
+  { name: "WION (YouTube)", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_gUM8rL-Lrg6O3adPW9K1g", siteUrl: "https://www.youtube.com/channel/UC_gUM8rL-Lrg6O3adPW9K1g", region: "South Asia", category: "video" },
+
+  // Reference creators: what top explainer channels publish (kept out of the news feed)
+  { name: "TLDR News", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCSMqateX8OA2s1wsOR2EgJA", siteUrl: "https://www.youtube.com/channel/UCSMqateX8OA2s1wsOR2EgJA", region: "Global", category: "reference" },
+  { name: "Think School", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCKZozRVHRYsYHGEyNKuhhdA", siteUrl: "https://www.youtube.com/channel/UCKZozRVHRYsYHGEyNKuhhdA", region: "Global", category: "reference" },
+  { name: "Johnny Harris", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCmGSJVG3mCRXVOP4yZrU1Dw", siteUrl: "https://www.youtube.com/channel/UCmGSJVG3mCRXVOP4yZrU1Dw", region: "Global", category: "reference" },
+  { name: "Peek TV", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCF_kWxafJ5Nr0OLd9aoCHsQ", siteUrl: "https://www.youtube.com/channel/UCF_kWxafJ5Nr0OLd9aoCHsQ", region: "Global", category: "reference" },
+  { name: "Dylan Page", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCxdahU0yiKnA7Q5sHQljm_g", siteUrl: "https://www.youtube.com/channel/UCxdahU0yiKnA7Q5sHQljm_g", region: "Global", category: "reference" },
+  { name: "Vox", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCLXo7UDZvByw2ixzpQCufnA", siteUrl: "https://www.youtube.com/channel/UCLXo7UDZvByw2ixzpQCufnA", region: "Global", category: "reference" },
+  { name: "PolyMatter", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCgNg3vwj3xt7QOrcIDaHdFg", siteUrl: "https://www.youtube.com/channel/UCgNg3vwj3xt7QOrcIDaHdFg", region: "Global", category: "reference" },
+  { name: "Wendover Productions", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC9RM-iSvTu1uPJb8X5yp3EQ", siteUrl: "https://www.youtube.com/channel/UC9RM-iSvTu1uPJb8X5yp3EQ", region: "Global", category: "reference" },
+  { name: "CaspianReport", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCwnKziETDbHJtx78nIkfYug", siteUrl: "https://www.youtube.com/channel/UCwnKziETDbHJtx78nIkfYug", region: "Global", category: "reference" },
 ];

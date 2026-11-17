@@ -5,7 +5,7 @@ import { getSetting } from "./repo/settings";
 import { nowIso } from "./ids";
 import { uniqueTokens } from "./text";
 import { recordTaste } from "./ideation/repo";
-import { activeChannelId, CHANNEL_CLUSTER_SQL } from "./channels";
+import { activeChannel, activeChannelId, CHANNEL_CLUSTER_SQL, termMatcher } from "./channels";
 
 /**
  * Transparent, rule-based ranking. No model calls. Every score comes with a
@@ -36,6 +36,8 @@ export interface RankPrefs {
   termWeights: Map<string, number>;
   regionWeights: Record<string, number>;
   now: number;
+  boost?: (text: string) => string[];
+  mute?: (text: string) => string[];
 }
 
 export interface ScoreBreakdown {
@@ -107,6 +109,11 @@ export function scoreCluster(input: RankInput, prefs: RankPrefs): ScoreBreakdown
   affinity = Math.max(-4, Math.min(4, affinity));
   if (affinity) parts.push({ label: "Learned from your feedback", value: affinity });
 
+  const boosted = prefs.boost?.(input.text) ?? [];
+  if (boosted.length) parts.push({ label: `Your focus: ${boosted.slice(0, 3).join(", ")}`, value: Math.min(6, 2.5 * boosted.length) });
+  const muted = prefs.mute?.(input.headline) ?? [];
+  if (muted.length) parts.push({ label: `Played down: ${muted.join(", ")}`, value: -5 });
+
   if (input.rating) parts.push({ label: input.rating > 0 ? "You marked interesting" : "You marked not interesting", value: input.rating * 3 });
 
   let hidden = false;
@@ -130,7 +137,8 @@ export function loadPrefs(db: DB): RankPrefs {
   const termWeights = new Map(
     (db.prepare("SELECT term, weight FROM term_weights WHERE ABS(weight) > 0.01").all() as { term: string; weight: number }[]).map((r) => [r.term, r.weight]),
   );
-  return { signals, rules, termWeights, regionWeights: getSetting(db, "discover.region_weights"), now: Date.now() };
+  const ch = activeChannel(db);
+  return { signals, rules, termWeights, regionWeights: getSetting(db, "discover.region_weights"), now: Date.now(), boost: termMatcher(ch.boostTerms), mute: termMatcher(ch.muteTerms) };
 }
 
 export interface RankedCluster {
@@ -193,14 +201,15 @@ export function rankFeed(db: DB, query: FeedQuery = {}): { items: RankedCluster[
   const rows = db.prepare(`SELECT c.* FROM clusters c WHERE ${where.join(" AND ")} ORDER BY c.last_updated_at DESC LIMIT 1500`).all(...params) as ClusterRow[];
 
   const memberStmt = db.prepare(
-    `SELECT a.title, a.summary, a.publisher, a.image_url, COALESCE(f.priority, 1) AS priority FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.cluster_id = ?`,
+    `SELECT a.title, a.summary, a.publisher, a.image_url, COALESCE(f.priority, 1) AS priority, COALESCE(f.category, '') AS category FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.cluster_id = ?`,
   );
   const qStmt = db.prepare("SELECT COUNT(*) AS n, (SELECT text FROM questions WHERE cluster_id = ? AND archived = 0 ORDER BY priority ASC, position ASC LIMIT 1) AS top FROM questions WHERE cluster_id = ? AND archived = 0");
   const pStmt = db.prepare("SELECT COUNT(*) AS n FROM project_items WHERE item_type = 'cluster' AND item_id = ?");
 
   const scored: RankedCluster[] = [];
   for (const r of rows) {
-    const members = memberStmt.all(r.id) as { title: string; summary: string | null; publisher: string | null; image_url: string | null; priority: number }[];
+    const members = memberStmt.all(r.id) as { title: string; summary: string | null; publisher: string | null; image_url: string | null; priority: number; category: string }[];
+    const videoOnly = members.length > 0 && members.every((m) => m.category === "video");
     const publishers = [...new Set(members.map((m) => m.publisher ?? "Unknown"))];
     if (query.publisher && !publishers.includes(query.publisher)) continue;
     const tok = parseJson<{ t: string[]; a: string[] }>(r.tokens, { t: [], a: [] });
@@ -212,7 +221,7 @@ export function rankFeed(db: DB, query: FeedQuery = {}): { items: RankedCluster[
         text,
         publishers,
         regions: parseJson<string[]>(r.regions, []),
-        sourceCount: r.source_count,
+        sourceCount: videoOnly ? Math.ceil(r.source_count / 2) : r.source_count,
         articleCount: r.article_count,
         lastUpdated: new Date(r.last_updated_at).getTime(),
         avgFeedPriority: members.length ? members.reduce((s, m) => s + m.priority, 0) / members.length : 1,

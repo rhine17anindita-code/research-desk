@@ -14,6 +14,7 @@ import { findOpportunities } from "./opportunities";
 import { getPulse, type Pulse } from "./pulse";
 import { createIdea, getInspiration, listIdeas, listInspirations, tasteStats, type Idea } from "./repo";
 import { personalContext } from "./personal";
+import { familiarityDays, isOldNews } from "./familiarity";
 
 /**
  * The idea engine. Thinks like a top internet creator, not a librarian:
@@ -62,6 +63,9 @@ What makes an idea great (use these, don't list them):
 - A curiosity gap with real stakes: a mystery, a reveal, a "wait, what?" fact, a villain/hero, money, power, danger, injustice, absurdity, or a twist on something everyone thinks they know.
 - One-of-a-kind: the angle, connection or reframe nobody has done yet. Not "explaining the news" — finding the story inside the news, the history behind it, the person behind it, the number nobody noticed, the thing they don't want you to know (only when true).
 - Mass appeal for THIS channel's audience: identity, everyday life, pride, fear, money, culture, rivalry, nostalgia. Test: would someone who never reads news share it?
+- Collated + hidden: combine information scattered across several reports, add the context or history most people don't know, and point at the question nobody is asking. Information that isn't easily found is gold.
+- Not already obvious: if the audience has heard about a story for weeks (marked "Already familiar"), only pitch it with a genuinely surprising new angle; otherwise skip it.
+- Procedural or generic news (rule amendments, routine statements, foreign politics with no link to the audience) is boring unless you find the angle that makes ordinary people care.
 - Packaging first: a title under ~70 characters that creates a gap (specific > vague; names, numbers and places beat abstractions), 2 alternative titles with different emotional levers, a thumbnail concept (one striking visual + ≤4 words of text), and the exact first 1–3 seconds / first line.
 - Use trending searches and the most-read pages to ride existing attention, and "on this day" history for anniversary hooks — but connect them to something the audience cares about.
 
@@ -88,6 +92,8 @@ export interface GenerateIdeasOptions {
 interface StoryIn { clusterId: string; headline: string; summary: string | null; publishers: string[]; reasons: string[]; openQuestions: { text: string; state: string }[] }
 
 function storyText(db: DB, label: string, o: StoryIn): string {
+  const story = getStory(db, o.clusterId);
+  const fam = story ? familiarityDays(db, story.entities) : 0;
   const answered = (db.prepare("SELECT id, text FROM questions WHERE cluster_id = ? AND archived = 0 LIMIT 6").all(o.clusterId) as { id: string; text: string }[])
     .map((q) => ({ q, a: listAnswers(db, q.id).find((x) => !x.superseded) }))
     .filter((x) => x.a)
@@ -97,6 +103,7 @@ function storyText(db: DB, label: string, o: StoryIn): string {
     o.summary ? `  ${truncate(o.summary, 300)}` : "",
     `  Coverage: ${o.publishers.slice(0, 5).join(", ")}${o.publishers.length > 5 ? ` +${o.publishers.length - 5}` : ""}`,
     o.reasons.length ? `  Gap: ${o.reasons.slice(0, 3).join("; ")}` : "",
+    isOldNews(fam) ? `  Already familiar: in the news on ${fam} of the last 30 days — the audience knows the basics` : "",
     answered.length ? `  Research so far: ${answered.map((x) => `${x.q.text} → ${truncate(x.a!.summary, 180)}`).join(" | ")}` : "",
   ].filter(Boolean).join("\n");
 }
@@ -165,6 +172,12 @@ export async function generateIdeasV2(db: DB, opts: GenerateIdeasOptions = {}): 
 
   const user = [
     personalContext(db),
+    ch.goodExamples.trim() ? `THE STANDARD TO BEAT — ideas and titles this creator would jump on:\n${ch.goodExamples.trim()}` : "",
+    ch.badExamples.trim() ? `WHAT BORES THEM — never pitch like this:\n${ch.badExamples.trim()}` : "",
+    ch.referenceCreators.trim() ? `REFERENCE CREATORS (match their curiosity, research depth and packaging — not their topics): ${ch.referenceCreators.trim()}` : "",
+    `MIX: about ${ch.newsRatio}% of ideas tied to today's news or online conversation, about ${100 - ch.newsRatio}% evergreen (history, explainers, "the real story behind", systems, culture).`,
+    ch.boostTerms.length ? `PRIORITISE: ${ch.boostTerms.join(", ")}` : "",
+    ch.muteTerms.length ? `PLAY DOWN unless genuinely major: ${ch.muteTerms.join(", ")}` : "",
     stats.formats.length ? `FORMATS THEY KEEP vs SKIP: ${stats.formats.slice(0, 6).map((f) => `${f.id} ${f.liked}/${f.passed}`).join(", ")}` : "",
     stats.reasons.length ? `REASONS THEY GAVE: ${stats.reasons.map((r) => `${r.reason} ×${r.n}`).join(", ")}` : "",
     recentSaved.length ? `IDEAS THEY KEPT:\n${recentSaved.join("\n")}` : "",

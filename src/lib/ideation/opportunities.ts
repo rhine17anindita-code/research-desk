@@ -3,7 +3,8 @@ import { parseJson } from "../db";
 import { loadPrefs } from "../ranking";
 import { detectSignals } from "../signals";
 import { uniqueTokens } from "../text";
-import { activeChannel, CHANNEL_CLUSTER_SQL } from "../channels";
+import { activeChannel, CHANNEL_CLUSTER_SQL, termMatcher } from "../channels";
+import { familiarityDays, isOldNews } from "./familiarity";
 import { listInspirations, tasteStats } from "./repo";
 
 /**
@@ -39,6 +40,8 @@ export function findOpportunities(db: DB, opts: { days?: number; limit?: number;
   const labels = Object.fromEntries(prefs.signals.map((s) => [s.id, s.label]));
 
   const channel = activeChannel(db);
+  const boost = termMatcher(channel.boostTerms);
+  const mute = termMatcher(channel.muteTerms);
   // "Missed by international outlets" only means something for channels that follow them.
   const channelHasIntl = !!db.prepare("SELECT 1 FROM channel_feeds cf JOIN feeds f ON f.id = cf.feed_id WHERE cf.channel_id = ? AND f.category = 'international' LIMIT 1").get(channel.id);
   const profileTerms = new Set(uniqueTokens(`${channel.profile} ${channel.description ?? ""}`));
@@ -110,6 +113,12 @@ export function findOpportunities(db: DB, opts: { days?: number; limit?: number;
     // Fresher is better for timely formats; mild decay.
     const ageH = (Date.now() - new Date(c.last_updated_at).getTime()) / 3_600_000;
     score += 1.5 * Math.pow(0.5, ageH / 48);
+
+    const boosted = boost(text);
+    if (boosted.length) { score += Math.min(4, 1.5 * boosted.length); reasons.unshift(`Your focus: ${boosted.slice(0, 3).join(", ")}`); }
+    if (mute(c.headline).length) score -= 5;
+    const fam = familiarityDays(db, parseJson<string[]>(c.entities, []));
+    if (isOldNews(fam)) { score -= 3; reasons.push(`Already familiar — in the news on ${fam} of the last 30 days; needs a genuinely new angle`); }
 
     if (score < 3 || !reasons.length) continue;
     out.push({

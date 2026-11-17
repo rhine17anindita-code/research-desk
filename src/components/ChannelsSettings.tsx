@@ -17,7 +17,10 @@ const TEMPLATES: [string, string][] = [
 
 function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; feeds: FeedLite[]; members: string[]; active: boolean; onlyOne: boolean }) {
   const router = useRouter();
-  const [f, setF] = useState({ name: ch.name, description: ch.description ?? "", profile: ch.profile, geo: ch.geo, dailyIdeas: ch.dailyIdeas });
+  const [f, setF] = useState({
+    name: ch.name, description: ch.description ?? "", profile: ch.profile, geo: ch.geo, dailyIdeas: ch.dailyIdeas, color: ch.color, newsRatio: ch.newsRatio,
+    boostTerms: ch.boostTerms.join(", "), muteTerms: ch.muteTerms.join(", "), goodExamples: ch.goodExamples, badExamples: ch.badExamples, referenceCreators: ch.referenceCreators,
+  });
   const [inChannel, setIn] = useState(new Set(members));
   const [showSources, setShowSources] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -67,6 +70,43 @@ function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; fee
         onChange={(e) => setF({ ...f, profile: e.target.value })}
         placeholder="e.g. YouTube + Reels for 18–35 Bangladeshis. Punchy, myth-busting, 'the real story behind' energy. Loves hidden history, money and power, and anything that reframes something everyone thinks they know."
       />
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="label">Ideas you&apos;d jump on (titles or one-liners, one per line)</label>
+          <textarea className="input min-h-[110px] text-[12.5px]" value={f.goodExamples} onChange={(e) => setF({ ...f, goodExamples: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Ideas that bore you (and why)</label>
+          <textarea className="input min-h-[110px] text-[12.5px]" value={f.badExamples} onChange={(e) => setF({ ...f, badExamples: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Prioritise (people, places, topics — comma separated)</label>
+          <input className="input text-[12.5px]" value={f.boostTerms} onChange={(e) => setF({ ...f, boostTerms: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Play down unless major</label>
+          <input className="input text-[12.5px]" value={f.muteTerms} onChange={(e) => setF({ ...f, muteTerms: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Creators whose style to aim for</label>
+          <input className="input text-[12.5px]" value={f.referenceCreators} onChange={(e) => setF({ ...f, referenceCreators: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">News vs evergreen: {f.newsRatio}% news · {100 - f.newsRatio}% evergreen</label>
+          <input type="range" min={0} max={100} step={10} value={f.newsRatio} onChange={(e) => setF({ ...f, newsRatio: Number(e.target.value) })} className="w-full" />
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <span className="label !mb-0">Colour</span>
+        {["coral", "teal", "violet", "amber", "blue", "rose", "green"].map((c) => (
+          <button
+            key={c}
+            title={c}
+            onClick={() => setF({ ...f, color: c })}
+            className={`h-6 w-6 rounded-full ch-dot-${c} ${f.color === c ? "ring-2 ring-offset-2 ring-ink/40" : ""}`}
+          />
+        ))}
+      </div>
       <label className="mt-2 flex items-center gap-2 text-[13px] text-ink-2">
         <input type="checkbox" checked={f.dailyIdeas} onChange={(e) => setF({ ...f, dailyIdeas: e.target.checked })} />
         Start each day with a fresh batch of ideas for this channel (one AI call per day, counted in your budget)

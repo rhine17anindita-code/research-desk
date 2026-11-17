@@ -18,17 +18,34 @@ export interface Channel {
   dailyIdeas: boolean;
   lastDailyAt: string | null;
   position: number;
+  color: string;
+  newsRatio: number;
+  boostTerms: string[];
+  muteTerms: string[];
+  goodExamples: string;
+  badExamples: string;
+  referenceCreators: string;
 }
 
 interface Row {
   id: string; name: string; description: string | null; profile: string; taste_summary: string; taste_updated_at: string | null; geo: string;
   daily_ideas: number; last_daily_at: string | null; position: number;
+  color: string; news_ratio: number; boost_terms: string; mute_terms: string; good_examples: string; bad_examples: string; reference_creators: string;
 }
 
 const map = (r: Row): Channel => ({
   id: r.id, name: r.name, description: r.description, profile: r.profile, tasteSummary: r.taste_summary, tasteUpdatedAt: r.taste_updated_at, geo: r.geo,
   dailyIdeas: !!r.daily_ideas, lastDailyAt: r.last_daily_at, position: r.position,
+  color: r.color, newsRatio: r.news_ratio, boostTerms: splitTerms(r.boost_terms), muteTerms: splitTerms(r.mute_terms),
+  goodExamples: r.good_examples, badExamples: r.bad_examples, referenceCreators: r.reference_creators,
 });
+
+export function splitTerms(s: string): string[] {
+  return s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+}
+
+/** Channel colour palette (names map to CSS accent tokens). */
+export const CHANNEL_COLORS = ["coral", "teal", "violet", "amber", "blue", "rose", "green"] as const;
 
 export function listChannels(db: DB): Channel[] {
   return (db.prepare("SELECT * FROM channels ORDER BY position, created_at").all() as Row[]).map(map);
@@ -80,14 +97,30 @@ export function createChannel(db: DB, input: { name: string; description?: strin
   return getChannel(db, id)!;
 }
 
-export function updateChannel(db: DB, id: string, patch: Partial<Pick<Channel, "name" | "description" | "profile" | "tasteSummary" | "tasteUpdatedAt" | "geo" | "dailyIdeas" | "lastDailyAt">>): Channel | null {
+export type ChannelPatch = Partial<Pick<Channel, "name" | "description" | "profile" | "tasteSummary" | "tasteUpdatedAt" | "geo" | "dailyIdeas" | "lastDailyAt" | "color" | "newsRatio" | "goodExamples" | "badExamples" | "referenceCreators">> & {
+  boostTerms?: string[] | string;
+  muteTerms?: string[] | string;
+};
+
+export function updateChannel(db: DB, id: string, patch: ChannelPatch): Channel | null {
   const c = getChannel(db, id);
   if (!c) return null;
   const n = { ...c, ...patch };
+  const terms = (v: string[] | string) => (Array.isArray(v) ? v : splitTerms(v)).join(", ");
   db.prepare(
-    "UPDATE channels SET name = ?, description = ?, profile = ?, taste_summary = ?, taste_updated_at = ?, geo = ?, daily_ideas = ?, last_daily_at = ?, updated_at = ? WHERE id = ?",
-  ).run(n.name, n.description, n.profile, n.tasteSummary, n.tasteUpdatedAt, n.geo.toUpperCase().slice(0, 2), n.dailyIdeas ? 1 : 0, n.lastDailyAt, nowIso(), id);
+    `UPDATE channels SET name = ?, description = ?, profile = ?, taste_summary = ?, taste_updated_at = ?, geo = ?, daily_ideas = ?, last_daily_at = ?,
+       color = ?, news_ratio = ?, boost_terms = ?, mute_terms = ?, good_examples = ?, bad_examples = ?, reference_creators = ?, updated_at = ? WHERE id = ?`,
+  ).run(
+    n.name, n.description, n.profile, n.tasteSummary, n.tasteUpdatedAt, n.geo.toUpperCase().slice(0, 2), n.dailyIdeas ? 1 : 0, n.lastDailyAt,
+    n.color, Math.max(0, Math.min(100, Math.round(n.newsRatio))), terms(n.boostTerms), terms(n.muteTerms), n.goodExamples, n.badExamples, n.referenceCreators, nowIso(), id,
+  );
   return getChannel(db, id);
+}
+
+/** Case-insensitive whole-word matcher for a channel's boost/mute terms. */
+export function termMatcher(terms: string[]): (text: string) => string[] {
+  const res = terms.map((t) => ({ t, re: new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i") }));
+  return (text: string) => res.filter((x) => x.re.test(text)).map((x) => x.t);
 }
 
 /** Deleting a channel keeps its ideas, inspirations and projects (they move to the first remaining channel). */
@@ -112,4 +145,4 @@ export function setFeedChannel(db: DB, channelId: string, feedId: string, on: bo
 }
 
 /** SQL fragment restricting clusters (alias c) to stories reported by this channel's feeds. Bind the channel id. */
-export const CHANNEL_CLUSTER_SQL = "c.id IN (SELECT a.cluster_id FROM articles a JOIN channel_feeds cf ON cf.feed_id = a.feed_id WHERE cf.channel_id = ? AND a.cluster_id IS NOT NULL)";
+export const CHANNEL_CLUSTER_SQL = "c.id IN (SELECT a.cluster_id FROM articles a JOIN channel_feeds cf ON cf.feed_id = a.feed_id JOIN feeds rf ON rf.id = a.feed_id WHERE cf.channel_id = ? AND a.cluster_id IS NOT NULL AND COALESCE(rf.category, '') != 'reference')";

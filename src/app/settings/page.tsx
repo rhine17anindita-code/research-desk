@@ -4,6 +4,7 @@ import { getAllSettings } from "@/lib/repo/settings";
 import { getAiStatus } from "@/lib/ai/service";
 import { usageSummary } from "@/lib/repo/usage";
 import { MODEL_PRICING } from "@/lib/ai/pricing";
+import { TASK_GROUPS } from "@/lib/ai/task-models";
 import { AiSettings, FeedsSettings, PersonalisationSettings, PipelineSettings } from "@/components/SettingsClient";
 import { ChannelsSettings } from "@/components/ChannelsSettings";
 import { activeChannel, activeChannelId, listChannels } from "@/lib/channels";
@@ -61,6 +62,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           status={getAiStatus(db)}
           models={Object.entries(MODEL_PRICING).map(([id, p]) => ({ id, label: p.label, input: p.input, output: p.output }))}
           usage={usageSummary(db)}
+          taskGroups={TASK_GROUPS.map((g) => ({ id: g.id, label: g.label, hint: g.hint, defaultModel: g.defaultModel }))}
         />
       )}
       {tab === "channels" && (

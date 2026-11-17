@@ -1,5 +1,5 @@
 import type { DB } from "../db";
-import { activeChannelId } from "../channels";
+import { activeChannel, activeChannelId, termMatcher } from "../channels";
 import { extractEntities, stripHtml } from "../text";
 
 /**
@@ -30,6 +30,8 @@ const VERBS: Record<string, number> = {
 };
 
 const LOADED = /\b(war|kill|killed|death|dead|die|genocide|nuclear|bomb|illegal|corrupt\w*|lie|lies|liar|betray\w*|traitor|resign\w*|arrest\w*|ban|banned|sanction\w*|coup|terror\w*|crisis|collapse|revenge|destroy\w*|never|enemy|shame|disgrace|fraud|rigged|stolen|invade|invasion|crime|criminal|prison|jail|execute\w*|bankrupt\w*|threat|fire|fired|scandal|secret|cover-?up|conspiracy|regret|mistake|apolog\w*|racist|hate|extremist|weapon\w*|blood|famine|starv\w*)\b/gi;
+
+const SPORT = /\b(football|cricket|match|matches|coach|squad|wicket|innings|goal|goals|league|tournament|world cup|season|striker|batting|bowling|fixture|kick-off|referee|olympic|tennis|nba|nfl|fifa|uefa|ipl|test series|odi|t20|series|captain|batter|batsman|bowler|runs|wickets?|sixes|umpire|half-century|century|semi-?final|final whistle)\b/i;
 
 const NOT_PEOPLE = new Set([
   "Reuters", "AP", "AFP", "BBC", "CNN", "Agence France-Presse", "Associated Press", "Al Jazeera", "Bloomberg", "Xinhua", "PTI", "ANI", "UNB", "BSS", "Dawn", "The Hindu",
@@ -62,7 +64,8 @@ function speakerFor(text: string, quote: string): { speaker: string; verb: strin
   const ok = (name: string | undefined) => !!name && !PRONOUN.test(name) && !NOT_PEOPLE.has(name) && name.length > 2;
   const strip = (r: { speaker: string; verb: string } | null) => {
     if (!r) return r;
-    const parts = r.speaker.split(/\s+/);
+    const last = r.speaker.split(/\.\s+/).pop() ?? r.speaker;
+    const parts = last.split(/\s+/);
     while (parts.length > 1 && /^(Minister|President|Prime|Chief|Foreign|Home|Finance|Defence|Defense|Secretary|General|Senator|Governor|Mayor|Judge|Justice|Speaker|Ambassador|Director|Chairman|Chair|CEO|Former|Ex|Deputy|Leader|Commander|Spokesperson|Spokesman|Dr|Mr|Mrs|Ms|Sir)$/.test(parts[0])) parts.shift();
     return { ...r, speaker: parts.join(" ") };
   };
@@ -96,6 +99,10 @@ export function findStatements(db: DB, opts: { days?: number; limit?: number } =
   const coverage = new Map((db.prepare("SELECT id, source_count FROM clusters WHERE last_updated_at >= ?").all(since) as { id: string; source_count: number }[]).map((c) => [c.id, c.source_count]));
   const headlines = new Map((db.prepare("SELECT id, headline FROM clusters WHERE last_updated_at >= ?").all(since) as { id: string; headline: string }[]).map((c) => [c.id, c.headline]));
 
+  const ch = activeChannel(db);
+  const sportsChannel = SPORT.test(`${ch.name} ${ch.description ?? ""} ${ch.profile}`);
+  const boost = termMatcher(ch.boostTerms);
+  const mute = termMatcher(ch.muteTerms);
   const seen = new Set<string>();
   const out: Statement[] = [];
   for (const r of rows) {
@@ -116,6 +123,11 @@ export function findStatements(db: DB, opts: { days?: number; limit?: number } =
       const cov = r.cluster_id ? coverage.get(r.cluster_id) ?? 1 : 1;
       if (cov >= 3) { score += Math.min(3, Math.log2(cov)); why.push(`${cov} outlets covering the story`); }
       if (/\?|!/.test(quote)) score += 0.5;
+      const ctx = `${who.speaker} ${quote} ${r.title}`;
+      if (boost(ctx).length) { score += 3; why.unshift(`your focus: ${boost(ctx).slice(0, 2).join(", ")}`); }
+      if (mute(who.speaker).length) score -= 5;
+      // Sports quotes are noise for non-sports channels.
+      if (!sportsChannel && SPORT.test(`${quote} ${r.title}`)) score -= 6;
       if (score < 3) continue;
       out.push({
         quote, speaker: who.speaker, verb: who.verb, publisher: r.publisher, url: r.url, publishedAt: r.published_at, clusterId: r.cluster_id,
