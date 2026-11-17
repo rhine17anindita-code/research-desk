@@ -29,7 +29,7 @@ export interface TalkEpisode {
 
 interface Row { id: string; title: string; url: string; summary: string | null; publisher: string | null; published_at: string | null; image_url: string | null; language: string | null; feed_name: string }
 
-const BD = /bangladesh|dhaka|bangla|bnp|jamaat|awami|hasina|yunus|tarique|rohingya|chittagong|chattogram|sylhet|বাংলাদেশ|ঢাকা|বিএনপি|জামায়াত|আওয়ামী|হাসিনা|ইউনূস|তারেক/i;
+export const BD = /bangladesh|dhaka|bangla|bnp|jamaat|awami|hasina|yunus|tarique|rohingya|chittagong|chattogram|sylhet|বাংলাদেশ|ঢাকা|বিএনপি|জামায়াত|আওয়ামী|হাসিনা|ইউনূস|তারেক/i;
 
 export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number; language?: "bn" | "en" } = {}): Promise<TalkEpisode[]> {
   const ch = activeChannel(db);

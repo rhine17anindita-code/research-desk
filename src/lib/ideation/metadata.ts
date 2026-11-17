@@ -34,7 +34,7 @@ export function detectKind(url: string): string {
   return h ? "article" : "text";
 }
 
-function isPublicHttpUrl(raw: string): boolean {
+export function isPublicHttpUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
     if (!/^https?:$/.test(u.protocol)) return false;
@@ -45,7 +45,7 @@ function isPublicHttpUrl(raw: string): boolean {
   }
 }
 
-async function getText(url: string, accept = "text/html,application/json"): Promise<string> {
+export async function getText(url: string, accept = "text/html,application/json", cap = 600_000): Promise<string> {
   const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: accept }, signal: AbortSignal.timeout(10000), redirect: "follow" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const reader = res.body?.getReader();
@@ -53,7 +53,7 @@ async function getText(url: string, accept = "text/html,application/json"): Prom
   // Cap at ~600 KB: enough for <head> metadata.
   const chunks: Uint8Array[] = [];
   let size = 0;
-  while (size < 600_000) {
+  while (size < cap) {
     const { done, value } = await reader.read();
     if (done) break;
     chunks.push(value);

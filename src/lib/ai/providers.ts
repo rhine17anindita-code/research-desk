@@ -23,7 +23,21 @@ export class AnthropicProvider implements AiProvider {
       model: req.model,
       max_tokens: req.maxTokens,
       system: req.system,
-      messages: [{ role: "user" as const, content: req.user }],
+      messages: [
+        {
+          role: "user" as const,
+          content: req.files?.length
+            ? [
+                ...req.files.map((f) =>
+                  f.mediaType === "application/pdf"
+                    ? { type: "document", source: { type: "base64", media_type: f.mediaType, data: f.data } }
+                    : { type: "image", source: { type: "base64", media_type: f.mediaType, data: f.data } },
+                ),
+                { type: "text", text: req.user },
+              ]
+            : req.user,
+        },
+      ],
       output_config: {
         ...(req.effort ? { effort: req.effort } : {}),
         format: { type: "json_schema", schema: req.jsonSchema },
@@ -62,6 +76,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
   }
 
   async complete(req: CompletionRequest): Promise<CompletionResult> {
+    if (req.files?.length) throw new Error("Reading images and PDFs needs the Anthropic provider (Settings → AI).");
     const key = process.env.OPENAI_COMPAT_API_KEY?.trim();
     const res = await fetch(`${this.baseUrl()}/chat/completions`, {
       method: "POST",

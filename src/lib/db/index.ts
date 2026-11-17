@@ -52,9 +52,8 @@ export function openDb(file: string): DB {
 export function getDb(): DB {
   if (!globalForDb.__researchDb) {
     globalForDb.__researchDb = openDb(resolveDbPath());
-    // Optional scheduled ingestion, started with the first server-side DB use.
-    const minutes = Number(process.env.INGEST_INTERVAL_MINUTES ?? 0);
-    if (minutes >= 5 && !process.env.VITEST) void import("../scheduler").then((m) => m.startScheduler(minutes));
+    // Automatic feed checks (interval from Settings, default 15 min), started with the first server-side DB use.
+    if (!process.env.VITEST && process.env.NEXT_PHASE !== "phase-production-build") void import("../scheduler").then((m) => m.startScheduler());
   }
   return globalForDb.__researchDb;
 }

@@ -29,6 +29,10 @@ export interface AppSettings {
   "channel.active": string;
   /** Per task-group model overrides (group id → model id); empty = group default. */
   "ai.task_models": Record<string, string>;
+  /** How often the server checks feeds and shows by itself (minutes; 0 = off). */
+  "ingest.interval_minutes": number;
+  /** When the creator last looked at the Studio (for "new since you looked"). */
+  "studio.seen_at": string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -58,4 +62,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "taste.updated_at": "",
   "channel.active": "ch_default",
   "ai.task_models": {},
+  "ingest.interval_minutes": 15,
+  "studio.seen_at": "",
 };

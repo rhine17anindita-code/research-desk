@@ -8,7 +8,11 @@ export interface CompletionRequest {
   maxTokens: number;
   model: string;
   effort?: "low" | "medium" | "high";
+  /** Images or PDFs to read alongside the text (Anthropic only). Base64 data. */
+  files?: AiFile[];
 }
+
+export interface AiFile { mediaType: string; data: string }
 
 export interface CompletionResult {
   text: string;
@@ -43,4 +47,8 @@ export interface AiTask<T> {
   bypassCache?: boolean;
   /** Use the configured bulk model (cheaper) when set. */
   bulk?: boolean;
+  /** Images or PDFs to read (Anthropic only). */
+  files?: AiFile[];
+  /** Rough input tokens the files add, for the cost estimate. */
+  fileTokens?: number;
 }

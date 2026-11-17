@@ -11,7 +11,8 @@ export interface BackingInfo {
   sources: { id: string; title: string; publisher: string | null; url: string | null }[];
 }
 
-const KIND_LABEL: Record<string, string> = { news: "From the news", trend: "Riding a trend", history: "History", archive: "Archive", statement: "A statement", culture: "Culture", inspiration: "From your inspiration", pitch: "Your idea", talk: "From a talk show", evergreen: "Evergreen" };
+const KIND_LABEL: Record<string, string> = { news: "From the news", trend: "Riding a trend", history: "History", archive: "Archive", statement: "A statement", culture: "Culture", inspiration: "From your inspiration", pitch: "Your idea", talk: "From a talk show",
+  research: "From your research", evergreen: "Evergreen" };
 
 export function FormatChip({ format }: { format: string }) {
   const f = FORMAT_BY_ID[format];

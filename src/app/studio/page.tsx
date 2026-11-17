@@ -12,7 +12,7 @@ import { GeneratePanel } from "@/components/ideas/GeneratePanel";
 import { Composer } from "@/components/studio/Composer";
 import { Pipeline } from "@/components/studio/Pipeline";
 import { DailyTrigger } from "@/components/studio/DailyTrigger";
-import { CreatorsSection, TalkSection, YourChannelSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
+import { CreatorsSection, MyResearchSection, TalkSection, YourChannelSection, InspirationSection, PulseSection, StatementsSection, UntoldSection } from "@/components/studio/SideSections";
 import { referenceVideos } from "@/lib/ideation/creators";
 import { youtubeConfigured } from "@/lib/media";
 import { ownYoutube } from "@/lib/ideation/own";
@@ -20,6 +20,10 @@ import { talkEpisodes } from "@/lib/ideation/talk";
 import { topUpEvergreen } from "@/lib/ideation/evergreen";
 import { storiesToBuild } from "@/lib/ideation/build-stories";
 import { AutoRefresh, StoriesToBuild } from "@/components/studio/StoriesToBuild";
+import { LiveBar } from "@/components/studio/LiveBar";
+import { liveStatus } from "@/lib/live";
+import { listResearch } from "@/lib/research-inbox";
+import { getSetting } from "@/lib/repo/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +39,9 @@ export default async function StudioPage() {
     i.packaging ? i.packaging.scores.hook + i.packaging.scores.massAppeal + i.packaging.scores.novelty : 0;
   topUpEvergreen(db); // free evergreen ideas, so the grid is never empty
   const lastIngest = (db.prepare("SELECT MAX(started_at) AS t FROM ingest_runs").get() as { t: string | null }).t;
-  const stale = !lastIngest || Date.now() - Date.parse(lastIngest) > 60 * 60_000;
+  // Safety net if the server's own schedule is off or asleep: pull when the page is opened and things are old.
+  const stale = !lastIngest || Date.now() - Date.parse(lastIngest) > 30 * 60_000;
+  const live = liveStatus(db, getSetting(db, "studio.seen_at") || null);
   const deck = listIdeas(db, { status: "new", limit: 60 }).sort((a, b) => score(b) - score(a));
   const backing = backingFor(db, deck);
   const pulse = cachedPulse(db, ch.geo);
@@ -60,6 +66,7 @@ export default async function StudioPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-6">
+          <LiveBar initial={live} />
           <Composer />
           {stale && <AutoRefresh />}
           {needsDaily && <DailyTrigger />}
@@ -94,6 +101,7 @@ export default async function StudioPage() {
 
         <aside className="space-y-4">
           <YourChannelSection yt={await ownYoutube(db)} links={ch.links} />
+          <MyResearchSection items={listResearch(db, 4).map(({ id, title, kind, createdAt, status }) => ({ id, title, kind, createdAt, status }))} />
           <StatementsSection statements={findStatements(db, { limit: 10 })} />
           <UntoldSection opps={findOpportunities(db, { limit: 8 })} />
           <TalkSection bn={await talkEpisodes(db, { language: "bn", limit: 8 })} en={await talkEpisodes(db, { language: "en", limit: 8 })} />

@@ -8,8 +8,11 @@ import { InlineIdeas } from "./InlineIdeas";
 import { PitchCard } from "./PitchCard";
 import { CONTENT_FORMATS } from "@/lib/ideation/formats";
 import type { Idea, Inspiration } from "@/lib/ideation/repo";
+import type { ResearchView } from "@/lib/research-inbox";
+import { ResearchCard } from "../research/ResearchInbox";
 
 type Result =
+  | { kind: "research"; item: ResearchView }
   | { kind: "pitch"; idea: Idea }
   | { kind: "inspiration"; item: Inspiration; metadataFound: boolean }
   | { kind: "topic"; topic: string };
@@ -54,6 +57,23 @@ export function Composer() {
     }
   };
 
+  const saveResearch = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const parts = text.trim().split(/\s+/);
+      const payload = isLink ? { url: parts[0], note: parts.slice(1).join(" ") || undefined } : { text: text.trim() };
+      const r = await api<{ item: ResearchView }>("/api/research-items", "POST", payload);
+      setResult({ kind: "research", item: r.item });
+      setText("");
+      router.refresh();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const savePitch = async () => {
     setBusy(true);
     setErr(null);
@@ -76,7 +96,7 @@ export function Composer() {
         rows={text.length > 120 ? 5 : 2}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Paste a link (YouTube, reel, article, paper…), write your own idea — any format — or type a topic you want ideas about."
+        placeholder="Paste a link or an article you read, write your own idea — any format — or type a topic you want ideas about."
       />
       <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-3">
         {isLink ? (
@@ -87,7 +107,10 @@ export function Composer() {
             <button className="btn-primary" disabled={busy} onClick={saveInspiration}>
               <Icon name="bookmark" size={14} /> {busy ? "Reading link…" : "Save as inspiration"}
             </button>
-            <span className="text-[12px] text-muted">Add words after the link to say why it inspires you.</span>
+            <button className="btn" disabled={busy} onClick={saveResearch} title="Pull in the full article (or video transcript) as your research, then get angles, ideas or a project from it">
+              <Icon name="pin" size={14} /> Add to my research
+            </button>
+            <span className="text-[12px] text-muted">Add words after the link for your note.</span>
           </>
         ) : (
           <>
@@ -100,6 +123,11 @@ export function Composer() {
             <button className="btn" disabled={text.trim().length < 3} onClick={() => { setResult({ kind: "topic", topic: text.trim() }); }}>
               <Icon name="bulb" size={14} /> Get ideas about this
             </button>
+            {text.trim().length > 200 && (
+              <button className="btn" disabled={busy} onClick={saveResearch} title="Save this text (an article, post or statement you copied) as research">
+                <Icon name="pin" size={14} /> Save as my research
+              </button>
+            )}
           </>
         )}
       </div>
@@ -108,9 +136,10 @@ export function Composer() {
       {result && (
         <div className="mt-4 border-t border-line pt-4">
           <div className="mb-2 flex items-center justify-between">
-            <span className="eyebrow">{result.kind === "pitch" ? "Your idea" : result.kind === "inspiration" ? "Saved inspiration" : `Ideas about “${result.topic}”`}</span>
+            <span className="eyebrow">{result.kind === "research" ? "Added to my research" : result.kind === "pitch" ? "Your idea" : result.kind === "inspiration" ? "Saved inspiration" : `Ideas about “${result.topic}”`}</span>
             <button className="btn-ghost !px-1" onClick={() => setResult(null)}><Icon name="x" size={13} /></button>
           </div>
+          {result.kind === "research" && <ResearchCard item={result.item} defaultOpen />}
           {result.kind === "pitch" && <PitchCard initial={result.idea} />}
           {result.kind === "inspiration" && (
             <div className="space-y-2">

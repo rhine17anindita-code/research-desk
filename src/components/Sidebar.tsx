@@ -12,6 +12,7 @@ import { Icon } from "./Icon";
 
 const NAV = [
   { href: "/studio", label: "Studio", icon: "bulb" },
+  { href: "/inbox", label: "My research", icon: "pin" },
   { href: "/discover", label: "Discover", icon: "discover" },
   { href: "/research", label: "Research", icon: "research" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },

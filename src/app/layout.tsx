@@ -3,6 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { LiveWatcher } from "@/components/LiveWatcher";
 import { getDb } from "@/lib/db";
 import { getAiStatus } from "@/lib/ai/service";
 import { authMode } from "@/lib/auth";
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="min-w-0 flex-1">{children}</main>
         </div>
         <CommandPalette />
+        <LiveWatcher />
       </body>
     </html>
   );

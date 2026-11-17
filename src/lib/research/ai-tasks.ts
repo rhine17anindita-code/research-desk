@@ -55,7 +55,8 @@ export function buildSourcePack(sources: Source[], maxChars = 24000, perSource =
   for (const s of sources) {
     if (seen.has(s.id)) continue;
     seen.add(s.id);
-    const excerpt = s.excerpt ? truncate(s.excerpt, perSource) : "(no excerpt available — only the title is known)";
+    // The creator's own research carries full text: give it more room than a feed blurb.
+    const excerpt = s.excerpt ? truncate(s.excerpt, s.provider === "user" ? perSource * 4 : perSource) : "(no excerpt available — only the title is known)";
     const block = [
       `[S${n}] ${s.title}`,
       `type: ${s.kind}${s.publisher ? ` | publisher: ${s.publisher}` : ""}${s.authors ? ` | authors: ${truncate(s.authors, 120)}` : ""}${s.publishedAt ? ` | date: ${s.publishedAt.slice(0, 10)}` : ""}`,

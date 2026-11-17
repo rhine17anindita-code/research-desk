@@ -21,7 +21,7 @@ export function TalkSection({ bn, en, full }: { bn: TalkEpisode[]; en: TalkEpiso
   return (
     <Section
       title="Talk shows & podcasts"
-      hint="Claims, insider details and arguments from Bangladeshi and international shows — ideas to check, explain or challenge."
+      hint="What Bangladeshi and international shows are arguing about. Open an episode for its key moments (from the transcript) and ideas from what was actually said."
       more={full ? undefined : { href: "/ideas/talk", label: "All" }}
     >
       <div className="mb-2 flex gap-1">
@@ -30,8 +30,8 @@ export function TalkSection({ bn, en, full }: { bn: TalkEpisode[]; en: TalkEpiso
       </div>
       <ul className={full ? "grid gap-x-6 md:grid-cols-2" : ""}>
         {list.map((e) => (
-          <Expandable key={e.articleId} label="Ideas from this episode" payload={{ talkIds: [e.articleId] }}>
-            <a href={e.url} target="_blank" rel="noreferrer" className="flex gap-2.5">
+          <Expandable key={e.articleId} label="Ideas from this episode" payload={{ talkIds: [e.articleId] }} extra={<Link href={`/ideas/talk/${e.articleId}`} className="btn-ghost mt-1 !px-0 !text-[12px] !text-accent"><Icon name="chat" size={12} /> What was said</Link>}>
+            <Link href={`/ideas/talk/${e.articleId}`} className="flex gap-2.5">
               {e.thumbnail && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={e.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-[52px] w-[92px] shrink-0 rounded-lg bg-surface-2 object-cover" />
@@ -42,7 +42,7 @@ export function TalkSection({ bn, en, full }: { bn: TalkEpisode[]; en: TalkEpiso
                   {e.show}{e.publishedAt ? ` · ${timeAgo(e.publishedAt)}` : ""}{e.views != null ? ` · ${compact(e.views)} views` : ""}{e.short ? " · clip" : ""}
                 </span>
               </span>
-            </a>
+            </Link>
             {e.reasons.length > 0 && <div className="mt-1 text-[11.5px] leading-snug text-accent">{e.reasons.slice(0, 2).join(" · ")}</div>}
           </Expandable>
         ))}
@@ -164,14 +164,17 @@ function Section({ title, hint, children, more }: { title: string; hint?: string
 }
 
 /** One expandable row: click to reveal ideas built from it, right here. */
-function Expandable({ children, payload, label }: { children: React.ReactNode; payload: Record<string, unknown>; label: string }) {
+function Expandable({ children, payload, label, extra }: { children: React.ReactNode; payload: Record<string, unknown>; label: string; extra?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <li className="border-b border-line py-2.5 last:border-0">
       {children}
-      <button className="btn-ghost mt-1 !px-0 !text-[12px] !text-accent" onClick={() => setOpen((o) => !o)}>
-        <Icon name={open ? "up" : "bulb"} size={12} /> {open ? "Close" : "Ideas from this"}
-      </button>
+      <div className="flex gap-3">
+        <button className="btn-ghost mt-1 !px-0 !text-[12px] !text-accent" onClick={() => setOpen((o) => !o)}>
+          <Icon name={open ? "up" : "bulb"} size={12} /> {open ? "Close" : "Ideas from this"}
+        </button>
+        {extra}
+      </div>
       {open && <div className="mt-2"><InlineIdeas payload={payload} label={label} count={3} /></div>}
     </li>
   );
@@ -262,6 +265,26 @@ export function InspirationSection({ items }: { items: Inspiration[] }) {
         ))}
         {!items.length && <li className="text-[12.5px] text-muted">Nothing yet — paste a reel, video or article above.</li>}
       </ul>
+    </Section>
+  );
+}
+
+/** The latest things the creator added to My research. */
+export function MyResearchSection({ items }: { items: { id: string; title: string; kind: string; createdAt: string; status: string }[] }) {
+  return (
+    <Section title="My research" hint="Things you found yourself — articles, posts, TV notes, files." more={{ href: "/inbox", label: items.length ? "All" : "Add" }}>
+      {items.length ? (
+        <ul className="space-y-1.5">
+          {items.slice(0, 4).map((i) => (
+            <li key={i.id} className="text-[12.5px]">
+              <Link href="/inbox" className="line-clamp-1 text-ink hover:underline">{i.title}</Link>
+              <span className="text-[11px] text-muted">{timeAgo(i.createdAt)}{i.status === "needs_read" ? " · waiting to be read" : i.status === "thin" ? " · partly read" : ""}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[12.5px] text-muted">Read something today? Paste the link in the box above and press “Add to my research”, or <Link href="/inbox" className="text-accent hover:underline">add a screenshot or note</Link>.</p>
+      )}
     </Section>
   );
 }

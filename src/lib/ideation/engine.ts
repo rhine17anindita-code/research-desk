@@ -6,6 +6,8 @@ import { activeChannel, CHANNEL_CLUSTER_SQL } from "../channels";
 import { getStory, getStoryArticles } from "../repo/stories";
 import { listAnswers } from "../repo/questions";
 import { sourceForArticle, upsertSource } from "../repo/sources";
+import { clock, findMoments, textAround, transcriptFor } from "../transcripts";
+import { getResearch } from "../research-inbox";
 import { ftsQuery, jaccard, truncate, uniqueTokens } from "../text";
 import { buildSourcePack, resolveRefs, type TaskOutcome } from "../research/ai-tasks";
 import type { Source } from "../types";
@@ -48,7 +50,7 @@ const EngineSchema = z.object({
       who_shares: z.string(),
       format: z.enum(formatIds),
       angle_type: z.enum(angleIds),
-      source_kind: z.enum(["news", "trend", "history", "archive", "statement", "culture", "inspiration", "talk"]),
+      source_kind: z.enum(["news", "trend", "history", "archive", "statement", "culture", "inspiration", "talk", "research"]),
       stories: z.array(z.string()),
       pulse: z.array(z.string()),
       sources: z.array(z.string()),
@@ -71,6 +73,7 @@ What makes an idea great (use these, don't list them):
 - Procedural or generic news (rule amendments, routine statements, foreign politics with no link to the audience) is boring unless you find the angle that makes ordinary people care.
 - Packaging first: a title under ~70 characters that creates a gap (specific > vague; names, numbers and places beat abstractions), 2 alternative titles with different emotional levers, a thumbnail concept (one striking visual + ≤4 words of text), and the exact first 1–3 seconds / first line.
 - TALK SHOWS & PODCASTS (K#) are raw material, not facts: mine them for surprising claims, insider details, disagreements, predictions and topics the news hasn't picked up — then build the idea around checking, explaining or challenging them. Bangla shows are fine as material; always write in English. Cite K labels in the pulse field. Anything a host or guest claimed goes in open_questions to verify.
+- THE CREATOR'S OWN RESEARCH (R#) is something they found and want to make content from: every idea in such a batch must be built on it — different angles (explain, investigate, connect to history/money/power, challenge, what happens next). Cite R labels in the pulse field; use source_kind "research".
 - Use trending searches and the most-read pages to ride existing attention, and "on this day" history for anniversary hooks — but connect them to something the audience cares about.
 
 Hard rules:
@@ -92,6 +95,10 @@ export interface GenerateIdeasOptions {
   sourceKinds?: string[];
   /** Article ids of talk-show/podcast episodes to build from. */
   talkIds?: string[];
+  /** A specific moment (seconds) of an episode to build around. */
+  talkMoment?: { articleId: string; start: number };
+  /** Items from "My research" to build from. */
+  researchIds?: string[];
   estimateOnly?: boolean;
 }
 
@@ -151,7 +158,8 @@ export async function generateIdeasV2(db: DB, opts: GenerateIdeasOptions = {}): 
   const stories = pickStories(db, pulse, opts.clusterIds);
   const wantsHistory = !opts.sourceKinds?.length || opts.sourceKinds.includes("history");
   const wantsTrend = !opts.sourceKinds?.length || opts.sourceKinds.includes("trend");
-  if (!stories.length && !pulse?.mostRead.length && !opts.talkIds?.length) return { ok: false, reason: "provider_error", message: "Nothing to work from yet. Refresh feeds first." };
+  if (opts.talkMoment) opts.talkIds = [...new Set([opts.talkMoment.articleId, ...(opts.talkIds ?? [])])];
+  if (!stories.length && !pulse?.mostRead.length && !opts.talkIds?.length && !opts.researchIds?.length) return { ok: false, reason: "provider_error", message: "Nothing to work from yet. Refresh feeds first." };
 
   // P-labels: pulse items (trends, most-read, on-this-day).
   const pulseItems: { label: string; text: string; wiki?: { title: string; url: string; extract: string } }[] = [];
@@ -171,6 +179,22 @@ export async function generateIdeasV2(db: DB, opts: GenerateIdeasOptions = {}): 
       ? (await talkEpisodes(db, { limit: 6 }).catch(() => [])).map((e) => ({ articleId: e.articleId, show: e.show, title: e.title, summary: e.summary, publishedAt: e.publishedAt }))
       : [];
   const talkByLabel = new Map(talk.map((t, i) => [`K${i + 1}`, t.articleId]));
+  // What was actually said: key transcript moments for chosen episodes (free; cached captions), or the chosen moment.
+  const said = new Map<string, string>();
+  for (const t of opts.talkIds?.length ? talk : []) {
+    const tr = await transcriptFor(db, t.articleId).catch(() => null);
+    if (!tr || tr.status !== "ok") continue;
+    said.set(
+      t.articleId,
+      opts.talkMoment?.articleId === t.articleId
+        ? `  BUILD AROUND THIS MOMENT:\n${truncate(textAround(tr, opts.talkMoment.start), 3500)}`
+        : `  KEY MOMENTS (automatic captions — names/numbers may be mis-heard):\n${findMoments(db, tr, 6).map((m) => `  [${clock(m.start)}] ${truncate(m.text, 700)}`).join("\n")}`,
+    );
+  }
+
+  // R-labels: the creator's own research (links, pasted text, files, notes).
+  const research = (opts.researchIds ?? []).map((id) => getResearch(db, id)).filter((r): r is NonNullable<typeof r> => !!r);
+  const researchByLabel = new Map(research.map((r, i) => [`R${i + 1}`, r]));
 
   const sources: Source[] = stories.flatMap((o) => getStoryArticles(db, o.clusterId).slice(0, 2).map((a) => sourceForArticle(db, a.id)).filter((s): s is Source => !!s));
   const pack = buildSourcePack(sources, 16000, 450);
@@ -202,7 +226,12 @@ export async function generateIdeasV2(db: DB, opts: GenerateIdeasOptions = {}): 
     `ANGLE TYPES: ${Object.keys(ANGLE_TYPES).join(", ")}`,
     stories.length ? `STORIES:\n${stories.map((o, i) => storyText(db, `T${i + 1}`, o)).join("\n\n")}` : "",
     talk.length
-      ? `TALK SHOWS & PODCASTS${opts.talkIds?.length ? " (build the batch around these episodes)" : ""}:\n${talk.map((t, i) => `[K${i + 1}] ${t.show}: “${t.title}”${t.publishedAt ? ` (${t.publishedAt.slice(0, 10)})` : ""}${t.summary ? `\n  ${truncate(t.summary, 700)}` : ""}`).join("\n")}`
+      ? `TALK SHOWS & PODCASTS${opts.talkIds?.length ? " (build the batch around these episodes)" : ""}:\n${talk.map((t, i) => `[K${i + 1}] ${t.show}: “${t.title}”${t.publishedAt ? ` (${t.publishedAt.slice(0, 10)})` : ""}${t.summary ? `\n  ${truncate(t.summary, 700)}` : ""}${said.get(t.articleId) ? `\n${said.get(t.articleId)}` : ""}`).join("\n")}`
+      : "",
+    research.length
+      ? `THE CREATOR'S OWN RESEARCH (build the batch around this — they found it and want content from it; cite R labels in the pulse field):\n${research
+          .map((r, i) => `[R${i + 1}] ${r.title}${r.url ? ` (${r.url})` : ""}${r.note ? `\n  Their note: ${truncate(r.note, 400)}` : ""}\n  ${truncate(r.summary ? `${r.summary}\n  ${r.body ?? ""}` : r.body ?? "", 3500)}`)
+          .join("\n\n")}`
       : "",
     pulseItems.length ? `PULSE (what large audiences are searching/reading right now, and anniversaries):\n${pulseItems.map((p) => `[${p.label}] ${p.text}`).join("\n")}` : "",
     `EXCERPTS (for facts):\n\n${pack.text}`,
@@ -230,6 +259,8 @@ export async function generateIdeasV2(db: DB, opts: GenerateIdeasOptions = {}): 
     const clusters = [...new Set(i.stories.map((r) => storyLabels.get(clean(r))).filter((x): x is string => !!x))];
     const srcIds = resolveRefs(i.sources, pack);
     for (const p of i.pulse) {
+      const rr = researchByLabel.get(clean(p));
+      if (rr?.sourceId) srcIds.push(rr.sourceId);
       const k = talkByLabel.get(clean(p));
       if (k) { const s = sourceForArticle(db, k); if (s) srcIds.push(s.id); }
       const item = pulseByLabel.get(clean(p));

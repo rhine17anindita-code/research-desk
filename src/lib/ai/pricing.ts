@@ -20,5 +20,7 @@ export function estimateCost(model: string, inputTokens: number, outputTokens: n
 
 /** Rough token estimate (≈4 characters per token for English prose). */
 export function approxTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  // Latin text is ~4 characters a token; Bangla and other non-Latin scripts take far more tokens.
+  const other = text.match(/[^\u0000-\u024f]/g)?.length ?? 0;
+  return Math.ceil((text.length - other) / 4 + other / 1.5);
 }

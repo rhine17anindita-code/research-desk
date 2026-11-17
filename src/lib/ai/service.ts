@@ -103,9 +103,9 @@ export function chooseModel(db: DB, task: { task?: string; bulk?: boolean }): st
 }
 
 /** Worst-case cost estimate for a task before it runs (full max_tokens output). */
-export function estimateTaskCost(db: DB, task: Pick<AiTask<unknown>, "system" | "user" | "maxTokens" | "bulk"> & { task?: string }): { model: string; inputTokens: number; usd: number } {
+export function estimateTaskCost(db: DB, task: Pick<AiTask<unknown>, "system" | "user" | "maxTokens" | "bulk" | "fileTokens"> & { task?: string }): { model: string; inputTokens: number; usd: number } {
   const model = chooseModel(db, task);
-  const inputTokens = approxTokens(task.system + task.user) + 400;
+  const inputTokens = approxTokens(task.system + task.user) + 400 + (task.fileTokens ?? 0);
   return { model, inputTokens, usd: estimateCost(model, inputTokens, task.maxTokens) };
 }
 
@@ -187,6 +187,7 @@ export async function runAiTask<T>(db: DB, task: AiTask<T>): Promise<AiResult<T>
       maxTokens: task.maxTokens,
       model,
       effort: s["ai.effort"],
+      files: task.files,
     });
   } catch (err) {
     const message = (err as Error).message || "Unknown provider error";

@@ -510,4 +510,47 @@ ALTER TABLE channels ADD COLUMN voice_samples TEXT NOT NULL DEFAULT '';
 UPDATE channels SET daily_ideas = 1 WHERE id = 'ch_default';
 `,
   },
+  {
+    id: 7,
+    name: "transcripts-and-research",
+    sql: `
+-- Talk-show/podcast transcripts (YouTube captions), cached per video, plus the AI read of an episode.
+CREATE TABLE transcripts (
+  video_id TEXT PRIMARY KEY,
+  article_id TEXT,
+  language TEXT,
+  kind TEXT,                         -- asr (automatic) | manual
+  segments TEXT NOT NULL DEFAULT '[]', -- JSON [{t, d, text}] seconds
+  chars INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,              -- ok | none | error
+  error TEXT,
+  mined TEXT,                        -- JSON, AI read of the episode
+  mined_at TEXT,
+  fetched_at TEXT NOT NULL
+);
+CREATE INDEX idx_transcripts_article ON transcripts(article_id);
+
+-- The creator's own research: links, pasted text, files, quick notes.
+CREATE TABLE research_items (
+  id TEXT PRIMARY KEY,
+  channel_id TEXT,
+  kind TEXT NOT NULL,                -- link | text | file | note
+  url TEXT,
+  title TEXT NOT NULL,
+  body TEXT,                         -- full text (article text, pasted text, transcript, file read)
+  summary TEXT,
+  note TEXT,
+  file_path TEXT,
+  file_type TEXT,
+  status TEXT NOT NULL DEFAULT 'ready', -- ready | thin | needs_read | failed
+  error TEXT,
+  source_id TEXT,
+  matched_clusters TEXT NOT NULL DEFAULT '[]',
+  project_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_research_items_created ON research_items(created_at);
+`,
+  },
 ];
