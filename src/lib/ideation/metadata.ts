@@ -1,4 +1,6 @@
 import type { DB } from "../db";
+import { isIP } from "node:net";
+import { isPrivateIp, safeFetch } from "../net";
 import { USER_AGENT } from "../ingest/rss";
 import { ftsQuery, keywordQuery, stripHtml, truncate } from "../text";
 
@@ -39,14 +41,16 @@ export function isPublicHttpUrl(raw: string): boolean {
     const u = new URL(raw);
     if (!/^https?:$/.test(u.protocol)) return false;
     const h = u.hostname;
-    return !(h === "localhost" || h.endsWith(".local") || /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) || h === "[::1]");
+    // Quick check by name; safeFetch re-checks the resolved address on every request and redirect.
+    if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".") || h.startsWith("[")) return false;
+    return !(isIP(h) && isPrivateIp(h));
   } catch {
     return false;
   }
 }
 
 export async function getText(url: string, accept = "text/html,application/json", cap = 600_000): Promise<string> {
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: accept }, signal: AbortSignal.timeout(10000), redirect: "follow" });
+  const res = await safeFetch(url, { headers: { "User-Agent": USER_AGENT, Accept: accept }, signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const reader = res.body?.getReader();
   if (!reader) return "";

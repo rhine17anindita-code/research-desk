@@ -13,17 +13,36 @@ export function ingestIntervalMinutes(): number {
     /* fall through */
   }
   const env = Number(process.env.INGEST_INTERVAL_MINUTES ?? 0);
-  return env >= 5 ? env : 15;
+  return env >= 5 ? env : 10;
 }
 
 /**
  * In-process schedule: checks once a minute whether feeds are due and pulls them.
  * No AI calls. Housekeeping (cache pruning) runs alongside.
  */
+let busy = false;
+
+/** Run the scheduled work if it's due (no-op otherwise). Safe to call often — e.g. from the wake-up ping. */
+export async function tickIfDue(): Promise<"ran" | "not-due" | "busy" | "off"> {
+  if (busy) return "busy";
+  if (ingestIntervalMinutes() < 5) return "off";
+  const db = getDb();
+  const last = (db.prepare("SELECT MAX(started_at) AS t FROM ingest_runs").get() as { t: string | null }).t;
+  if (last && Date.now() - Date.parse(last) < ingestIntervalMinutes() * 60_000) return "not-due";
+  await tick();
+  return "ran";
+}
+
 export function startScheduler() {
   if (g.__ingestTimer) return;
-  let busy = false;
-  const tick = async () => {
+  setTimeout(tick, 15_000).unref?.();
+  g.__ingestTimer = setInterval(tick, 60_000);
+  g.__ingestTimer.unref?.();
+  console.log("[scheduler] checking feeds automatically");
+}
+
+async function tick() {
+  {
     if (busy) return;
     const minutes = ingestIntervalMinutes();
     if (minutes < 5) return;
@@ -34,7 +53,7 @@ export function startScheduler() {
     try {
       const r = await ingestFeeds(db, { trigger: "scheduled" });
       console.log(`[scheduler] ingest: +${r.articlesNew} articles, ${r.clustersNew} new stories, ${r.feedsFailed} feed errors`);
-      db.prepare("DELETE FROM ai_cache WHERE created_at < datetime('now', '-90 days')").run();
+      db.prepare("DELETE FROM ai_cache WHERE created_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-90 days')").run();
       // Full articles for the stories that matter (free).
       const { fetchFullText } = await import("./ingest/fulltext");
       const ft = await fetchFullText(db, 120).catch(() => null);
@@ -53,9 +72,5 @@ export function startScheduler() {
     } finally {
       busy = false;
     }
-  };
-  setTimeout(tick, 15_000).unref?.();
-  g.__ingestTimer = setInterval(tick, 60_000);
-  g.__ingestTimer.unref?.();
-  console.log("[scheduler] checking feeds automatically");
+  }
 }

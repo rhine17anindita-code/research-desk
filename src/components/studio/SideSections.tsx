@@ -19,7 +19,9 @@ import type { TalkEpisode } from "@/lib/ideation/talk";
 /** Talk shows & podcasts: what hosts and guests are arguing about, as raw material for ideas. */
 export function TalkSection({ bn, en, full, updatedAt }: { bn: TalkEpisode[]; en: TalkEpisode[]; full?: boolean; updatedAt?: string | null }) {
   const [tab, setTab] = useState<"bn" | "en">(bn.length ? "bn" : "en");
-  const list = (tab === "bn" ? bn : en).slice(0, full ? 30 : 5);
+  const [order, setOrder] = useState<"top" | "latest">("top");
+  const base = tab === "bn" ? bn : en;
+  const list = (order === "latest" ? [...base].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")) : base).slice(0, full ? 30 : 5);
   return (
     <Section
       refresh={{ what: "talk", at: updatedAt }}
@@ -30,6 +32,10 @@ export function TalkSection({ bn, en, full, updatedAt }: { bn: TalkEpisode[]; en
       <div className="mb-2 flex gap-1">
         <button className={tab === "bn" ? "chip-accent" : "chip"} onClick={() => setTab("bn")}>Bangladesh ({bn.length})</button>
         <button className={tab === "en" ? "chip-accent" : "chip"} onClick={() => setTab("en")}>International ({en.length})</button>
+        <span className="ml-2 flex gap-1 border-l border-line pl-2">
+          <button className={order === "top" ? "chip-accent" : "chip"} onClick={() => setOrder("top")} title="Fresh episodes that touch your focus, break out, or aren't in the headlines yet">Top picks</button>
+          <button className={order === "latest" ? "chip-accent" : "chip"} onClick={() => setOrder("latest")} title="Newest first">Latest</button>
+        </span>
         {tab === "bn" && <span className="ml-auto"><EnglishSwitch pending={bn.some((e) => !e.titleEn)} /></span>}
       </div>
       <ul className={full ? "grid gap-x-6 md:grid-cols-2" : ""}>

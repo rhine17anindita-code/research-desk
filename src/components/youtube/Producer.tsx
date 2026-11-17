@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { ExpertPanel } from "../research/ExpertPanel";
+import { ReadTimeBar } from "../ReadTime";
 import { Icon } from "../Icon";
 import type { Brief } from "@/lib/youtube/producer";
 import { FORMATS } from "@/lib/youtube/guide";
@@ -18,7 +19,7 @@ const STEPS: { id: StepId; label: string; what: string }[] = [
 ];
 interface Info {
   title: string; status: Record<StepId, boolean>; brief: Brief | null; dossier: string; outline: string; script: string; hook: string; format: string | null; channel: string | null;
-  prompter: { section: string; lines: string[] }[]; pack: string | null; publishDate: string | null; voiceReady: boolean; solutions: boolean;
+  prompter: { section: string; lines: string[] }[]; pack: string | null; publishDate: string | null; voiceReady: boolean; solutions: boolean; contentType: string; timing: string;
 }
 
 /** One video, end to end: pick → the producer does strategy, research, outline, script, packaging → you record. */
@@ -131,6 +132,8 @@ export function Producer({ projectId }: { projectId: string }) {
         {view === "script" && (i.script ? (
           <>
             <p className="mb-2 text-[12.5px] text-muted">Edit anything in the <Link href={`/research/${projectId}`} className="text-accent underline">project&apos;s Script tab</Link> (select a passage to rewrite it). Your edits teach future scripts.</p>
+            <div className="mb-2"><ReadTimeBar script={i.script} contentType={i.contentType} formatLength={fmt?.length} timing={i.timing}
+              onTiming={async (j) => { setI({ ...i, timing: j }); await api(`/api/projects/${projectId}/production`, "PATCH", { docs: { timing: j } }); }} /></div>
             <Doc text={i.script} />
           </>
         ) : <Empty text="Written in your voice (Voice Lab), following the format's structure and the brief." />)}
@@ -152,7 +155,9 @@ function Doc({ text }: { text: string }) {
       {text.split("\n").map((l, k) => {
         const t = l.trim();
         if (!t) return <div key={k} className="h-2" />;
-        const html = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+        // Escape first: this text comes from AI that read untrusted articles.
+        const esc = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        const html = esc.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
         if (t.startsWith("# ")) return <h3 key={k} className="font-serif text-[18px] font-semibold text-ink">{t.slice(2)}</h3>;
         if (t.startsWith("## ")) return <h4 key={k} className="pt-2 font-serif text-[16px] font-semibold text-ink">{t.slice(3)}</h4>;
         if (t.startsWith("### ")) return <h5 key={k} className="pt-1 font-semibold text-ink">{t.slice(4)}</h5>;

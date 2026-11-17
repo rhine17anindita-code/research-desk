@@ -40,6 +40,8 @@ export interface ProductionDocs {
   yt_brief?: string; dossier?: string;
   /** "on" = the outline and script include a solutions section backed by the expert library. */
   solutions?: string;
+  /** Read-time tracker: extra clips/audio that play without the creator talking (JSON: { extras: [{label, seconds}] }). */
+  timing?: string;
 }
 export const DOC_KEYS = ["script", "shots", "thumbnail", "cutdowns", "captions"] as const;
 

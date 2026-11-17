@@ -1,4 +1,5 @@
 import { USER_AGENT } from "./ingest/rss";
+import { safeFetch } from "./net";
 import { stripHtml, truncate } from "./text";
 
 /**
@@ -111,7 +112,7 @@ export async function youtubeChannelFeed(input: string): Promise<{ url: string; 
   let name = "";
   if (!channelId) {
     const page = input.startsWith("http") ? input : `https://www.youtube.com/${input.startsWith("@") ? input : "@" + input}`;
-    const res = await fetch(page, { headers: { "User-Agent": "Mozilla/5.0 (compatible; ResearchDesk/0.1)", "Accept-Language": "en" }, signal: AbortSignal.timeout(12000) });
+    const res = await safeFetch(page, { headers: { "User-Agent": "Mozilla/5.0 (compatible; ResearchDesk/0.1)", "Accept-Language": "en" }, signal: AbortSignal.timeout(12000) });
     if (!res.ok) return null;
     const html = await res.text();
     // Prefer the page's canonical/og URL (the channel itself) over IDs of other channels mentioned on the page.

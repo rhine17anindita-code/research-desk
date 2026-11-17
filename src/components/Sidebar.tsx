@@ -1,5 +1,6 @@
 "use client";
 
+import { Wordmark } from "./Brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,7 +20,7 @@ const NAV: { section: string; items: { href: string; label: string; icon: string
     { href: "/inbox", label: "My research", icon: "pin" },
     { href: "/research", label: "Projects", icon: "research" },
     { href: "/library", label: "Library", icon: "library" },
-    { href: "/experts", label: "Expert views", icon: "question" },
+    { href: "/experts", label: "Expert views", icon: "chat" },
     { href: "/search", label: "Search", icon: "search" },
   ] },
   { section: "Make", items: [
@@ -32,6 +33,7 @@ const NAV: { section: string; items: { href: string; label: string; icon: string
     { href: "/monetise", label: "Monetise", icon: "bookmark" },
   ] },
   { section: "Set up", items: [
+    { href: "/guide", label: "Guide", icon: "question" },
     { href: "/preferences", label: "Preferences", icon: "pin" },
     { href: "/settings", label: "Settings", icon: "settings" },
   ] },
@@ -145,7 +147,7 @@ export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean
     <>
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur md:hidden print:hidden">
         <Link href="/studio" className="font-serif text-[17px] font-semibold tracking-tight">
-          Research Desk
+          <Wordmark size={17} tagline={false} />
         </Link>
         <button className="btn-ghost" onClick={() => setOpen((o) => !o)} aria-label="Menu" aria-expanded={open}>
           <Icon name={open ? "x" : "panel"} size={18} />
@@ -163,10 +165,7 @@ export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean
       <aside className="sticky top-0 hidden h-screen w-[216px] shrink-0 flex-col justify-between overflow-y-auto border-r border-line bg-surface/60 px-3 py-4 backdrop-blur md:flex">
         <div>
           <Link href="/studio" className="mb-5 block px-2.5">
-            <div className="font-serif text-[20px] font-bold leading-tight tracking-tight">
-              Research<span className="text-accent">Desk</span>
-            </div>
-            <div className="text-[11.5px] text-muted">Find it · shape it · prove it</div>
+            <Wordmark size={21} />
           </Link>
           <ChannelSwitcher channels={channels.list} active={channels.active} />
           {quick}

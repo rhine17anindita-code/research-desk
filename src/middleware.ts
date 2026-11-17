@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authMode, SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
 const PUBLIC_PATHS = ["/login", "/api/login", "/api/logout", "/manifest.webmanifest", "/icon.svg"];
-// The Mac helper signs its own requests (checked in the route), so it skips the session check.
-const HELPER_PREFIX = "/api/helper/";
+// The Mac helper signs its own requests (checked in each route), so these skip the session check.
+// An explicit list, so a new route under /api/helper/ never skips the password by accident.
+const HELPER_PATHS = ["/api/helper/jobs", "/api/helper/transcript", "/api/helper/media", "/api/helper/page", "/api/helper/translation", "/api/helper/import", "/api/helper/wake"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -19,7 +20,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const mode = authMode();
-  if (mode === "open" || PUBLIC_PATHS.includes(pathname) || pathname.startsWith(HELPER_PREFIX)) return NextResponse.next();
+  if (mode === "open" || PUBLIC_PATHS.includes(pathname) || HELPER_PATHS.includes(pathname)) return NextResponse.next();
 
   if (mode === "misconfigured") {
     const msg = "This site is locked: set SITE_PASSWORD in the server's environment variables (or ALLOW_OPEN_ACCESS=true to run without a password).";

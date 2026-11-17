@@ -1,5 +1,6 @@
 "use client";
 
+import { Wordmark } from "@/components/Brand";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -28,7 +29,7 @@ function LoginForm() {
   return (
     <form onSubmit={submit} className="card w-full max-w-sm p-6">
       <div className="mb-5">
-        <div className="font-serif text-[22px] font-semibold tracking-tight">Research Desk</div>
+        <Wordmark size={24} />
         <div className="text-[13px] text-muted">Enter the site password to continue.</div>
       </div>
       <label className="label" htmlFor="pw">Password</label>

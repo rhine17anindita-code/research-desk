@@ -1,6 +1,7 @@
 import Parser from "rss-parser";
 import { asText, stripHtml, truncate } from "../text";
 
+import { safeFetch } from "../net";
 export interface FeedItem {
   url: string;
   guid: string | null;
@@ -34,10 +35,9 @@ export async function fetchFeedXml(url: string, timeoutMs = 15000): Promise<stri
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       signal: ctrl.signal,
       headers: { "User-Agent": USER_AGENT, Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5" },
-      redirect: "follow",
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();

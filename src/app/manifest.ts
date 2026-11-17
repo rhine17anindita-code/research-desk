@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 /** Installable on phones; on Android the app then shows up in the Share menu and sends links to My research. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Research Desk",
-    short_name: "Research Desk",
+    name: "KNDL — A New Thing Media product",
+    short_name: "KNDL",
     start_url: "/studio",
     display: "standalone",
     background_color: "#ffffff",

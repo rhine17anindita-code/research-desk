@@ -1,0 +1,13 @@
+name: Keep the live site's news fresh
+# Hosting can put an idle server to sleep, which pauses the feed schedule. This pings the
+# public wake-up endpoint every 10 minutes; the site only pulls feeds when they're due.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: curl -fsS -m 60 "https://polite-midnightblue-newt-73.hostingersite.com/api/helper/wake" || true

@@ -49,7 +49,7 @@ export function dossierMarkdown(d: Dossier): string {
   const L: string[] = [];
   const p = d.project;
   L.push(`# ${p.title}`, "");
-  L.push(`*Stage: ${d.stageLabel} · Exported ${new Date().toISOString().slice(0, 10)} from Research Desk*`, "");
+  L.push(`*Stage: ${d.stageLabel} · Exported ${new Date().toISOString().slice(0, 10)} from KNDL*`, "");
   if (p.thesis) L.push(`**Research question / thesis.** ${p.thesis}`, "");
   if (d.storyBlocks.length) {
     L.push("## Stories", "");

@@ -25,8 +25,24 @@ function secret(): string {
 
 const enc = new TextEncoder();
 
+// When there's no SESSION_SECRET, the key comes from the password — stretched (PBKDF2, 200k rounds)
+// so a stolen cookie can't be used to guess the password quickly offline.
+let keyCache: { src: string; key: CryptoKey } | null = null;
+async function signingKey(): Promise<CryptoKey> {
+  const src = secret();
+  if (keyCache?.src === src) return keyCache.key;
+  let raw: BufferSource = enc.encode(src) as BufferSource;
+  if (!process.env.SESSION_SECRET) {
+    const base = await crypto.subtle.importKey("raw", enc.encode(src), "PBKDF2", false, ["deriveBits"]);
+    raw = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: enc.encode("kndl-session-v2"), iterations: 200_000, hash: "SHA-256" }, base, 256);
+  }
+  const key = await crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  keyCache = { src, key };
+  return key;
+}
+
 async function hmac(data: string): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", enc.encode(secret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await signingKey();
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
   return Array.from(new Uint8Array(sig), (b) => b.toString(16).padStart(2, "0")).join("");
 }

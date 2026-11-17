@@ -144,7 +144,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
                     {a.publisher} · {fmtDate(a.publishedAt ?? a.fetchedAt, true)}
                     {a.textStatus && TEXT_LABEL[a.textStatus] && <span className={`ml-1.5 rounded-full px-1.5 py-px text-[10.5px] font-medium ${TEXT_LABEL[a.textStatus][1]}`}>{TEXT_LABEL[a.textStatus][0]}</span>}
                   </div>
-                  <a href={a.directUrl || a.url} target="_blank" rel="noreferrer" className="block text-[13px] font-medium leading-snug text-ink hover:underline">
+                  <a href={/^https?:\/\//i.test(a.directUrl || a.url) ? a.directUrl || a.url : "#"} target="_blank" rel="noreferrer" className="block text-[13px] font-medium leading-snug text-ink hover:underline">
                     {a.title} <Icon name="external" size={11} className="inline text-muted" />
                   </a>
                   {isBangla(a.title) && <En text={getTranslation(db, "article", a.id)?.[0]} className="text-[12.5px]" />}

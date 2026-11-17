@@ -18,7 +18,7 @@ export const POST = route(async (req: Request) => {
   if (b.seen) setSetting(db, "studio.seen_at", nowIso());
   if (b.intervalMinutes !== undefined) {
     const m = Number(b.intervalMinutes);
-    if (![0, 10, 15, 30, 60].includes(m)) throw new Error("Choose 10, 15, 30 or 60 minutes, or off");
+    if (![0, 5, 10, 15, 30, 60].includes(m)) throw new Error("Choose 5, 10, 15, 30 or 60 minutes, or off");
     setSetting(db, "ingest.interval_minutes", m);
   }
   return { ok: true };

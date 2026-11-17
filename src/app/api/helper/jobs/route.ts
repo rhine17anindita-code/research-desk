@@ -18,7 +18,7 @@ export const GET = route((req: Request) => {
     ? (db
         .prepare(
           `SELECT a.id AS articleId, a.url FROM articles a JOIN feeds f ON f.id = a.feed_id
-           WHERE f.category = 'talk' AND f.enabled = 1 AND COALESCE(a.published_at, a.fetched_at) >= datetime('now', '-3 days')
+           WHERE f.category = 'talk' AND f.enabled = 1 AND COALESCE(a.published_at, a.fetched_at) >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-3 days')
            ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT 200`,
         )
         .all() as { articleId: string; url: string }[])

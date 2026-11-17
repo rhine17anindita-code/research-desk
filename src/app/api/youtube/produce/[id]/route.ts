@@ -15,7 +15,7 @@ export const GET = route(async (_req: Request, ctx: Ctx<{ id: string }>) => {
   return {
     ok: true, title: p.title, status: stepStatus(p), brief: getBrief(p), dossier: p.docs.dossier ?? "", outline: p.docs.outline ?? "", script: p.docs.script ?? "",
     hook: p.docs.hook ?? "", format: p.docs.yt_format ?? null, channel: p.docs.yt_channel ? getYtChannel(db, p.docs.yt_channel)?.name ?? null : null,
-    prompter: prompterText(p.docs.script ?? ""), pack: recordingPack(db, id), publishDate: p.publishDate, voiceReady: voiceReady(db), solutions: p.docs.solutions === "on",
+    prompter: prompterText(p.docs.script ?? ""), pack: recordingPack(db, id), publishDate: p.publishDate, voiceReady: voiceReady(db), solutions: p.docs.solutions === "on", contentType: p.contentType, timing: p.docs.timing ?? "",
   };
 });
 

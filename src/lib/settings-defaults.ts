@@ -18,6 +18,8 @@ export interface AppSettings {
   "budget.monthly_usd": number;
   "budget.per_task_usd": number;
   "discover.window_hours": number;
+  /** How fast the creator speaks on camera (words per minute), measured in the read-time tracker. */
+  "voice.wpm": number;
   "discover.region_weights": Record<string, number>;
   "pipeline.stages": PipelineStage[];
   "retrieval.providers": { openalex: boolean; crossref: boolean; wikipedia: boolean; gdelt: boolean };
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   "budget.monthly_usd": 20,
   "budget.per_task_usd": 0.5,
   "discover.window_hours": 96,
+  "voice.wpm": 150,
   "discover.region_weights": {},
   "pipeline.stages": [
     { id: "discovered", label: "Discovered" },

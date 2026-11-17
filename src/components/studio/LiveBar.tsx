@@ -10,7 +10,7 @@ import { pollLive, useLive } from "../LiveWatcher";
 import { timeAgo } from "@/lib/format";
 import type { LiveStatus, LiveStory } from "@/lib/live";
 
-const INTERVALS: [number, string][] = [[10, "10 min"], [15, "15 min"], [30, "30 min"], [60, "hour"], [0, "off"]];
+const INTERVALS: [number, string][] = [[5, "5 min"], [10, "10 min"], [15, "15 min"], [30, "30 min"], [60, "hour"], [0, "off"]];
 
 /**
  * The top of the Studio: when things were last pulled, a refresh-now button, how often the

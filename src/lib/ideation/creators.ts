@@ -22,7 +22,7 @@ export async function referenceVideos(db: DB, limit = 10): Promise<CreatorVideo[
     .prepare(
       `SELECT a.title, a.url, a.publisher, a.published_at, a.image_url FROM articles a JOIN feeds f ON f.id = a.feed_id
        WHERE f.category = 'reference' AND (f.id IN (SELECT feed_id FROM channel_feeds WHERE channel_id = ?) OR NOT EXISTS (SELECT 1 FROM channel_feeds WHERE feed_id = f.id))
-       AND COALESCE(a.published_at, a.fetched_at) >= datetime('now', '-45 days') ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT 120`,
+       AND COALESCE(a.published_at, a.fetched_at) >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-45 days') ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT 120`,
     )
     .all(activeChannelId(db)) as { title: string; url: string; publisher: string; published_at: string | null; image_url: string | null }[];
   const ids = rows.map((r) => youtubeId(r.url)).filter((x): x is string => !!x);

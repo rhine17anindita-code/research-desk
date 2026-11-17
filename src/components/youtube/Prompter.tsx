@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { usePace } from "../ReadTime";
+import { fmtTime } from "@/lib/readtime";
 
 /**
  * Full-screen teleprompter: only the words you say, big, scrolling at your pace.
@@ -43,13 +45,14 @@ export function Prompter({ projectId, title, sections }: { projectId: string; ti
     return () => window.removeEventListener("keydown", k);
   }, []);
 
+  const [wpm] = usePace();
   const words = sections.flatMap((s) => s.lines).join(" ").split(/\s+/).filter(Boolean).length;
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
       <div className="flex flex-wrap items-center gap-3 border-b border-white/10 px-4 py-2 text-[13px]">
         <Link href={`/youtube/make/${projectId}`} className="text-white/70 hover:text-white">← Back</Link>
         <span className="truncate font-semibold">{title}</span>
-        <span className="text-white/50">{words} words · ~{Math.round(words / 150)} min</span>
+        <span className="text-white/50">{words} words · ~{fmtTime((words / wpm) * 60)} at your {wpm} wpm</span>
         <span className="ml-auto flex flex-wrap items-center gap-3">
           <button className="rounded-full bg-white px-3 py-1 font-semibold text-black" onClick={() => setPlaying((p) => !p)}>{playing ? "Pause" : "Play"} (space)</button>
           <label className="flex items-center gap-1 text-white/70">Speed<input type="range" min={5} max={200} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} /></label>

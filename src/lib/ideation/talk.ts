@@ -42,11 +42,11 @@ export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number
        WHERE f.category = 'talk' AND f.enabled = 1
          AND (f.id IN (SELECT feed_id FROM channel_feeds WHERE channel_id = ?) OR NOT EXISTS (SELECT 1 FROM channel_feeds WHERE feed_id = f.id))
          AND f.id NOT IN (SELECT feed_id FROM channel_talk_off WHERE channel_id = ?)
-         AND COALESCE(a.published_at, a.fetched_at) >= datetime('now', ?)
+         AND COALESCE(a.published_at, a.fetched_at) >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
          ${opts.language ? "AND COALESCE(f.language, 'en') = ?" : ""}
        ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT 300`,
     )
-    .all(...[ch.id, ch.id, `-${opts.days ?? 10} days`, ...(opts.language ? [opts.language] : [])]) as Row[];
+    .all(...[ch.id, ch.id, `-${opts.days ?? 5} days`, ...(opts.language ? [opts.language] : [])]) as Row[];
   if (!rows.length) return [];
 
   // Numbers (best effort): views, and length to tell clips/Shorts from full episodes.
@@ -65,7 +65,7 @@ export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number
   const median = (a: number[]) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] ?? 0;
 
   // What's already in the headlines (last 4 days), to spot topics the news hasn't picked up.
-  const headlines = (db.prepare("SELECT headline FROM clusters WHERE last_updated_at >= datetime('now', '-4 days') ORDER BY source_count DESC LIMIT 400").all() as { headline: string }[])
+  const headlines = (db.prepare("SELECT headline FROM clusters WHERE last_updated_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-4 days') ORDER BY source_count DESC LIMIT 400").all() as { headline: string }[])
     .map((h) => new Set(uniqueTokens(h.headline)));
   const boost = termMatcher(ch.boostTerms);
   const mute = termMatcher(ch.muteTerms);
@@ -78,7 +78,7 @@ export async function talkEpisodes(db: DB, opts: { limit?: number; days?: number
     const reasons: string[] = [];
     let score = 0;
     const ageH = r.published_at ? (Date.now() - new Date(r.published_at).getTime()) / 3_600_000 : 96;
-    score += Math.max(0, 3 - ageH / 48); // fresher is better, fading over ~6 days
+    score += 7 * Math.pow(0.5, ageH / 12); // fresh first: worth 7 when new, half that after 12 hours
     const b = boost(text);
     if (b.length) { score += Math.min(6, b.length * 2); reasons.push(`Your focus: ${b.slice(0, 3).join(", ")}`); }
     const m = mute(text);

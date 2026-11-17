@@ -19,7 +19,17 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const PAGES = [
+  { title: "Guide — where to go for what", href: "/guide" },
+  { title: "Studio", href: "/studio" },
   { title: "Discover", href: "/discover" },
+  { title: "Expert views", href: "/experts" },
+  { title: "YouTube producer", href: "/youtube" },
+  { title: "Voice Lab", href: "/voice" },
+  { title: "My research", href: "/inbox" },
+  { title: "Calendar", href: "/calendar" },
+  { title: "Performance", href: "/performance" },
+  { title: "Monetise", href: "/monetise" },
+  { title: "Preferences", href: "/preferences" },
   { title: "Explore", href: "/explore" },
   { title: "Research projects", href: "/research" },
   { title: "Library", href: "/library" },

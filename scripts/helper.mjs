@@ -62,6 +62,8 @@ async function transcript(videoId, preferLang) {
   const score = (t) => (order.indexOf(t.languageCode.slice(0, 2)) + 1 || 9) * 2 + (t.kind === "asr" ? 1 : 0);
   const pick = [...tracks].sort((a, b) => score(a) - score(b))[0];
   const x = await fetch(pick.baseUrl.replace(/&fmt=[^&]+/, "") + "&fmt=json3", { signal: AbortSignal.timeout(20000) });
+  // YouTube rate-limits caption downloads from one address ("Sorry…" page): stop and come back later.
+  if (x.status === 429 || !/json/.test(x.headers.get("content-type") ?? "json")) throw Object.assign(new Error(`YouTube is rate-limiting (HTTP ${x.status})`), { rateLimited: true });
   const data = await x.json();
   const segments = [];
   for (const e of data.events ?? []) {
@@ -91,18 +93,28 @@ async function media(job) {
   }
 }
 
+// After YouTube rate-limits us, wait before asking for captions again (shared across sites and runs).
+const COOLDOWN = path.join(os.homedir(), ".research-desk-yt-cooldown");
+const coolingDown = () => { try { return Date.now() < Number(fs.readFileSync(COOLDOWN, "utf8")); } catch { return false; } };
+const PER_RUN = 12; // a few at a time, every 10 minutes, newest first — steady and under YouTube's radar
+
 async function runSite() {
   const { jobs, media: mediaJobs = [], pages = [], translate = [] } = await call("/api/helper/jobs");
   let done = 0;
-  for (const job of jobs) {
+  for (const job of coolingDown() ? [] : jobs.slice(0, PER_RUN)) {
     try {
       const t = await transcript(job.videoId, job.lang || "en");
       await call("/api/helper/transcript", { method: "POST", body: JSON.stringify({ videoId: job.videoId, articleId: job.articleId ?? null, ...t }) });
       done++;
     } catch (e) {
       log("skip", job.videoId, e.message);
+      if (e.rateLimited) {
+        fs.writeFileSync(COOLDOWN, String(Date.now() + 45 * 60_000));
+        log("YouTube rate limit: pausing transcripts for 45 minutes");
+        break;
+      }
     }
-    await new Promise((r) => setTimeout(r, 800)); // be gentle with YouTube
+    await new Promise((r) => setTimeout(r, 2500 + Math.random() * 2000)); // be gentle with YouTube
   }
   let vids = 0;
   for (const job of mediaJobs) {

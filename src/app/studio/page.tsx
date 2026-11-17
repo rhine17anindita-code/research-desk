@@ -47,6 +47,13 @@ export default async function StudioPage() {
   const backing = backingFor(db, deck);
   const pulse = cachedPulse(db, ch.geo);
   // Fresh AI ideas twice a day (only when switched on for this channel; budgets still apply).
+  // The slow, network-backed sections load side by side rather than one after another.
+  const [ytOwn, talkBn, talkEn, refVideos] = await Promise.all([
+    ownYoutube(db),
+    talkEpisodes(db, { language: "bn", limit: 16 }),
+    talkEpisodes(db, { language: "en", limit: 16 }),
+    referenceVideos(db, 8),
+  ]);
   const needsDaily = ch.dailyIdeas && (!ch.lastDailyAt || Date.now() - Date.parse(ch.lastDailyAt) > 12 * 3_600_000) && getAiStatus(db).available;
 
   return (
@@ -101,12 +108,12 @@ export default async function StudioPage() {
         </div>
 
         <aside className="space-y-4">
-          <YourChannelSection yt={await ownYoutube(db)} links={ch.links} updatedAt={getSetting(db, "perf.youtube_synced_at") || null} />
+          <YourChannelSection yt={ytOwn} links={ch.links} updatedAt={getSetting(db, "perf.youtube_synced_at") || null} />
           <MyResearchSection items={listResearch(db, 4).map(({ id, title, kind, createdAt, status }) => ({ id, title, kind, createdAt, status }))} />
           <StatementsSection statements={findStatements(db, { limit: 10 })} updatedAt={lastIngest} />
           <UntoldSection opps={findOpportunities(db, { limit: 8 })} updatedAt={lastIngest} />
-          <TalkSection bn={await talkEpisodes(db, { language: "bn", limit: 8 })} en={await talkEpisodes(db, { language: "en", limit: 8 })} updatedAt={lastTalk} />
-          <CreatorsSection videos={await referenceVideos(db, 8)} hasKey={youtubeConfigured()} updatedAt={lastIngest} />
+          <TalkSection bn={talkBn} en={talkEn} updatedAt={lastTalk} />
+          <CreatorsSection videos={refVideos} hasKey={youtubeConfigured()} updatedAt={lastIngest} />
           <PulseSection trends={pulse?.trends ?? []} mostRead={pulse?.mostRead ?? []} onThisDay={pulse?.onThisDay ?? []} geo={ch.geo} updatedAt={pulse?.fetchedAt ?? null} />
           <InspirationSection items={listInspirations(db, 10)} />
           <Link href="/ideas/taste" className="block text-center text-[12.5px] text-accent hover:underline">What it has learned about this channel →</Link>

@@ -15,6 +15,8 @@ const KINDS: { id: ExpertKind; label: string; tone: string }[] = [
   { id: "background", label: "Background & history", tone: "bg-surface-2 text-ink-2" },
   { id: "statement", label: "Statements", tone: "bg-surface-2 text-ink-2" },
 ];
+/** Links from outside sources: only http(s), never javascript: or data:. */
+const safeHref = (u: string) => (/^https?:\/\//i.test(u) ? u : "#");
 const KIND_OF = Object.fromEntries(KINDS.map((k) => [k.id, k])) as Record<ExpertKind, (typeof KINDS)[number]>;
 const TAGS = [
   { id: "solutions", label: "Solutions" },
@@ -155,7 +157,7 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
                   {term.loading ? "Looking it up…" : term.t ? (
                     <>
                       <span className="font-semibold text-ink">{term.t.title}: </span>{term.t.extract}
-                      {term.t.url && <a href={term.t.url} target="_blank" rel="noreferrer" className="ml-1 text-accent hover:underline">Wikipedia</a>}
+                      {term.t.url && <a href={safeHref(term.t.url)} target="_blank" rel="noreferrer" className="ml-1 text-accent hover:underline">Wikipedia</a>}
                     </>
                   ) : "No plain definition found."}
                 </div>
@@ -183,7 +185,7 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
                   <li key={i.id} id={`ex-${i.id}`} className={`flex gap-2 py-2 ${focus === i.id ? "-mx-2 rounded-lg bg-accent-soft/40 px-2" : ""}`}>
                     <button title={scope === "project" ? "Keep — the script can cite it" : "Keep"} className={`mt-0.5 shrink-0 text-[15px] leading-none ${i.saved ? "text-accent" : "text-muted hover:text-ink"}`} onClick={() => toggleSave(i)}>{i.saved ? "★" : "☆"}</button>
                     <div className="min-w-0 flex-1">
-                      <a href={i.url} target="_blank" rel="noreferrer" className="text-[13px] font-medium leading-snug text-ink hover:underline">{i.title} <Icon name="external" size={11} className="inline text-muted" /></a>
+                      <a href={safeHref(i.url)} target="_blank" rel="noreferrer" className="text-[13px] font-medium leading-snug text-ink hover:underline">{i.title} <Icon name="external" size={11} className="inline text-muted" /></a>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-muted">
                         <span className={`rounded-full px-1.5 py-px font-medium ${KIND_OF[i.kind].tone}`}>{KIND_OF[i.kind].label}</span>
                         {[i.publisher, i.year, i.authors && i.authors.split(",").slice(0, 2).join(",")].filter(Boolean).join(" · ")}
@@ -220,7 +222,7 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
 function BriefView({ b }: { b: SolutionsBrief }) {
   const ref = (labels: string[]) =>
     labels.map((l) => b.refs.find((r) => r.label === l.replace(/[[\]"]/g, ""))).filter(Boolean).map((r, k) => (
-      <a key={k} href={r!.url} target="_blank" rel="noreferrer" title={r!.title} className="mr-1 text-[11px] text-accent hover:underline">{r!.publisher || r!.label}</a>
+      <a key={k} href={safeHref(r!.url)} target="_blank" rel="noreferrer" title={r!.title} className="mr-1 text-[11px] text-accent hover:underline">{r!.publisher || r!.label}</a>
     ));
   return (
     <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
@@ -277,7 +279,7 @@ function AskAi({ item, onNote }: { item: ExpertItem; onNote: (id: string, n: Exp
   return (
     <div className="mt-1">
       <div className="flex flex-wrap items-center gap-3 text-[11.5px]">
-        <a href={item.url} target="_blank" rel="noreferrer" className="text-ink-2 hover:text-accent">Read it myself ↗</a>
+        <a href={safeHref(item.url)} target="_blank" rel="noreferrer" className="text-ink-2 hover:text-accent">Read it myself ↗</a>
         <button className="font-medium text-ai hover:underline" onClick={() => setOpen((o) => !o)}>{n ? (open ? "Hide AI notes" : "AI notes ✓") : open ? "Close" : "Ask AI to look into it"}</button>
       </div>
       {open && <AskAiBox item={item} onNote={onNote} />}
@@ -355,7 +357,7 @@ function GlanceView({ g, items, onShow, onNote, compact }: { g: Glance; items: E
             {g.readFirst.map((p) => (
               <li key={p.itemId} className="flex flex-wrap items-baseline gap-x-2">
                 <span className={`rounded-full px-1.5 py-px text-[10.5px] font-medium ${KIND_OF[p.kind].tone}`}>{KIND_OF[p.kind].label}</span>
-                <a href={p.url} target="_blank" rel="noreferrer" className="font-medium text-ink hover:underline">{p.title}</a>
+                <a href={safeHref(p.url)} target="_blank" rel="noreferrer" className="font-medium text-ink hover:underline">{p.title}</a>
                 <button className="text-[11.5px] text-accent hover:underline" onClick={() => onShow({ id: p.itemId })}>In library</button>
               </li>
             ))}
@@ -374,7 +376,7 @@ function GlancePointRow({ p, item, open, onToggle, onShow, onNote }: { p: Glance
       {p.text && <p className="text-[12.5px] leading-relaxed text-ink-2">{p.text}</p>}
       <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px]">
         <span className="text-muted">— {[p.publisher, p.year].filter(Boolean).join(", ") || KIND_OF[p.kind].label}</span>
-        <a href={p.url} target="_blank" rel="noreferrer" className="text-ink-2 hover:text-accent">Read ↗</a>
+        <a href={safeHref(p.url)} target="_blank" rel="noreferrer" className="text-ink-2 hover:text-accent">Read ↗</a>
         <button className="text-accent hover:underline" onClick={() => onShow({ id: p.itemId })}>In library</button>
         {item && <button className="font-medium text-ai hover:underline" onClick={onToggle}>{item.aiNote ? "AI notes ✓" : "Ask AI"}</button>}
       </div>

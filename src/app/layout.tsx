@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const display = Fraunces({ subsets: ["latin"], variable: "--font-display", display: "swap", axes: ["opsz", "SOFT", "WONK"] });
 
 export const metadata: Metadata = {
-  title: "Research Desk",
+  title: "KNDL",
   description: "A research environment that turns news into questions, evidence and original work.",
 };
 

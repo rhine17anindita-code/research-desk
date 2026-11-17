@@ -19,7 +19,7 @@ export function ShareHelp() {
       <summary className="cursor-pointer font-medium text-ink-2">Send things here straight from your phone or browser</summary>
       <ul className="mt-2 space-y-2 text-muted">
         <li>
-          <b className="text-ink-2">Android:</b> open this site in Chrome → ⋮ → <i>Add to Home screen</i>. Then &quot;Research Desk&quot; appears in the Share menu of any app.
+          <b className="text-ink-2">Android:</b> open this site in Chrome → ⋮ → <i>Add to Home screen</i>. Then &quot;KNDL&quot; appears in the Share menu of any app.
         </li>
         <li>
           <b className="text-ink-2">iPhone:</b> in the Shortcuts app make a shortcut with “Receive URLs and text from Share Sheet” → “Open URLs”: <code className="rounded bg-surface-2 px-1">{origin}/inbox?url=</code> followed by Shortcut Input (URL encoded). Turn on “Show in Share Sheet”.{" "}

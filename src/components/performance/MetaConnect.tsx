@@ -109,7 +109,7 @@ export function MetaConnect() {
           <li>Your app <b>“Research Desk”</b> at <a className="text-accent underline" href="https://developers.facebook.com/apps" target="_blank" rel="noreferrer">developers.facebook.com/apps</a> is already made — keep it. (Only if you ever make another: pick the use case <b>“Manage everything on your Page”</b>, and add <b>“Manage messaging & content on Instagram”</b>.)</li>
           <li>Open the <a className="text-accent underline" href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer">Graph API Explorer</a>. On the right: <b>Meta App</b> = Research Desk, <b>User or Page</b> = <b>User Token</b>.</li>
           <li>
-            Under <b>Permissions</b> add these, press <b>Generate Access Token</b>, and when Meta asks, <b>tick every Page and Instagram account</b> you want in Research Desk:
+            Under <b>Permissions</b> add these, press <b>Generate Access Token</b>, and when Meta asks, <b>tick every Page and Instagram account</b> you want in KNDL:
             <div className="mt-1 flex items-start gap-2">
               <code className="block flex-1 rounded bg-surface-2 px-2 py-1 text-[11.5px]">{SCOPES}</code>
               <button className="btn-ghost !px-1 !text-[12px] !text-accent" onClick={() => copy("s", SCOPES)}>{copied === "s" ? "Copied" : "Copy"}</button>
@@ -119,7 +119,7 @@ export function MetaConnect() {
               <code className="block flex-1 rounded bg-surface-2 px-2 py-1 text-[11.5px]">{MSG_SCOPES}</code>
               <button className="btn-ghost !px-1 !text-[12px] !text-accent" onClick={() => copy("m", MSG_SCOPES)}>{copied === "m" ? "Copied" : "Copy"}</button>
             </div>
-            <div className="mt-1 text-muted">Don&apos;t add anything that says “publish” or “content_publish” — Research Desk doesn&apos;t need them.</div>
+            <div className="mt-1 text-muted">Don&apos;t add anything that says “publish” or “content_publish” — KNDL doesn&apos;t need them.</div>
           </li>
           <li>
             <b>Make it last 60 days:</b> click the <b>ⓘ</b> beside the token → <b>Open in Access Token Tool</b> → scroll down → <b>Extend Access Token</b>. Meta then shows a line like <i>“This new long-lived access token will expire on …”</i> with a long code under it starting with <code className="rounded bg-surface-2 px-1">EAA</code>. <b>That code is the one to copy</b> — ignore the App ID, User ID and the table above it.

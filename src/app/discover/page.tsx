@@ -39,6 +39,17 @@ export default async function DiscoverPage({ searchParams }: { searchParams: SP 
   const publishers = (db.prepare("SELECT name FROM feeds WHERE enabled = 1 ORDER BY name").all() as { name: string }[]).map((r) => r.name);
   const lastRun = db.prepare("SELECT finished_at, articles_new FROM ingest_runs WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT 1").get() as { finished_at: string; articles_new: number } | undefined;
   const totals = db.prepare("SELECT (SELECT COUNT(*) FROM articles) AS a, (SELECT COUNT(*) FROM clusters) AS c, (SELECT COUNT(*) FROM feeds WHERE enabled = 1) AS f").get() as { a: number; c: number; f: number };
+  // Breaking: stories first seen in the last 6 hours, most-covered first; plus headlines from the last hour.
+  const breaking = db.prepare(
+    `SELECT id, headline, source_count, first_seen_at FROM clusters
+     WHERE first_seen_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-6 hours') AND is_sample = 0 AND state != 'dismissed'
+     ORDER BY (source_count >= 2) DESC, source_count DESC, last_updated_at DESC LIMIT 6`,
+  ).all() as { id: string; headline: string; source_count: number; first_seen_at: string }[];
+  const justIn = db.prepare(
+    `SELECT a.title, a.url, a.publisher, a.cluster_id, COALESCE(a.published_at, a.fetched_at) AS at FROM articles a JOIN feeds f ON f.id = a.feed_id
+     WHERE COALESCE(a.published_at, a.fetched_at) >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-90 minutes') AND f.category NOT IN ('talk', 'video', 'reference', 'culture') AND a.is_sample = 0
+     ORDER BY at DESC LIMIT 8`,
+  ).all() as { title: string; url: string; publisher: string | null; cluster_id: string | null; at: string }[];
   const hasSample = !!db.prepare("SELECT 1 FROM clusters WHERE is_sample = 1 LIMIT 1").get();
 
   const href = (patch: Record<string, string | undefined>) => {
@@ -91,6 +102,35 @@ export default async function DiscoverPage({ searchParams }: { searchParams: SP 
               {view === "ranked" && <AssessButton ids={items.filter((i) => !i.isSample).slice(0, 15).map((i) => i.id)} />}
             </div>
           </div>
+
+          {view === "ranked" && (breaking.length > 0 || justIn.length > 0) && (
+            <div className="mb-4 grid gap-3 rounded-xl border border-bad-soft bg-bad-soft/40 px-3.5 py-3 md:grid-cols-2">
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-wide text-bad"><span className="inline-block h-2 w-2 animate-pulse rounded-full bg-bad" /> Breaking · last 6 hours</div>
+                <ul className="space-y-1">
+                  {breaking.map((b) => (
+                    <li key={b.id} className="text-[13px] leading-snug">
+                      <Link href={`/story/${b.id}`} className="font-medium text-ink hover:underline">{b.headline}</Link>
+                      <span className="ml-1 text-[11.5px] text-muted">{b.source_count} outlet{b.source_count === 1 ? "" : "s"} · {timeAgo(b.first_seen_at)}</span>
+                    </li>
+                  ))}
+                  {!breaking.length && <li className="text-[12.5px] text-muted">Nothing new in the last 6 hours.</li>}
+                </ul>
+              </div>
+              <div>
+                <div className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-muted">Just in · last 90 minutes</div>
+                <ul className="space-y-1">
+                  {justIn.map((a, k) => (
+                    <li key={k} className="text-[12.5px] leading-snug">
+                      {a.cluster_id ? <Link href={`/story/${a.cluster_id}`} className="text-ink-2 hover:text-ink hover:underline">{a.title}</Link> : <a href={a.url} target="_blank" rel="noreferrer" className="text-ink-2 hover:underline">{a.title}</a>}
+                      <span className="ml-1 text-[11px] text-muted">{a.publisher} · {timeAgo(a.at)}</span>
+                    </li>
+                  ))}
+                  {!justIn.length && <li className="text-[12.5px] text-muted">Quiet right now — new headlines appear here as feeds update.</li>}
+                </ul>
+              </div>
+            </div>
+          )}
 
           <form className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0" action="/discover">
             {view !== "ranked" && <input type="hidden" name="view" value={view} />}

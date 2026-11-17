@@ -54,14 +54,14 @@ export function liveStatus(db: DB, since: string | null): LiveStatus {
   const newStories = (db.prepare("SELECT COUNT(*) AS n FROM clusters WHERE first_seen_at > ? AND is_sample = 0").get(sinceIso) as { n: number }).n;
   const newEpisodes = (
     db.prepare(
-      `SELECT COUNT(*) AS n FROM articles a JOIN feeds f ON f.id = a.feed_id WHERE f.category = 'talk' AND a.fetched_at > ? AND COALESCE(a.published_at, a.fetched_at) > datetime('now', '-2 days')`,
+      `SELECT COUNT(*) AS n FROM articles a JOIN feeds f ON f.id = a.feed_id WHERE f.category = 'talk' AND a.fetched_at > ? AND COALESCE(a.published_at, a.fetched_at) > strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-2 days')`,
     ).get(sinceIso) as { n: number }
   ).n;
 
   const recent = db
     .prepare(
       `SELECT id, headline, summary, source_count, first_seen_at, regions, entities FROM clusters
-       WHERE is_sample = 0 AND state != 'dismissed' AND first_seen_at > datetime('now', '-24 hours')
+       WHERE is_sample = 0 AND state != 'dismissed' AND first_seen_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-24 hours')
        ORDER BY source_count DESC LIMIT 300`,
     )
     .all() as Row[];

@@ -30,7 +30,7 @@ export function articlesNeedingText(db: DB, limit = 40): Row[] {
       `SELECT a.id, a.url, a.title, a.cluster_id, a.publisher FROM articles a
        WHERE a.text_status IS NULL AND a.is_sample = 0 AND a.url NOT LIKE '%youtube.com%' AND a.url NOT LIKE '%youtu.be%'
          AND a.cluster_id IN (
-           SELECT id FROM (SELECT id FROM clusters WHERE last_updated_at >= datetime('now', '-48 hours') AND source_count >= 2 AND state != 'dismissed' ORDER BY source_count DESC LIMIT 80)
+           SELECT id FROM (SELECT id FROM clusters WHERE last_updated_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-48 hours') AND source_count >= 2 AND state != 'dismissed' ORDER BY source_count DESC LIMIT 80)
            UNION SELECT item_id FROM project_items WHERE item_type = 'cluster'
          )
        ORDER BY a.fetched_at DESC LIMIT ?`,
@@ -104,7 +104,7 @@ export async function fetchFullText(db: DB, limit = 40): Promise<{ full: number;
     }),
   );
   // Google News items that were checked before their direct twin arrived get another look.
-  for (const r of db.prepare("SELECT id, url, title, cluster_id, publisher FROM articles WHERE text_status = 'headline' AND fetched_at >= datetime('now', '-2 days') LIMIT 200").all() as Row[]) {
+  for (const r of db.prepare("SELECT id, url, title, cluster_id, publisher FROM articles WHERE text_status = 'headline' AND fetched_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-2 days') LIMIT 200").all() as Row[]) {
     const twin = directTwin(db, r);
     if (twin?.full_text) saveText(db, r.id, "full", twin.full_text, twin.url);
   }
@@ -132,7 +132,7 @@ export function freeAlternatives(db: DB, articleId: string, limit = 3): { id: st
   if (same.length >= limit) return same;
   const st = db.prepare("SELECT tokens FROM clusters WHERE id = ?").get(a.cluster_id) as { tokens: string } | undefined;
   const toks = new Set<string>(JSON.parse(st?.tokens ?? "[]"));
-  const related = (db.prepare("SELECT id, tokens FROM clusters WHERE id != ? AND last_updated_at >= datetime('now', '-14 days') ORDER BY source_count DESC LIMIT 400").all(a.cluster_id) as { id: string; tokens: string }[])
+  const related = (db.prepare("SELECT id, tokens FROM clusters WHERE id != ? AND last_updated_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-14 days') ORDER BY source_count DESC LIMIT 400").all(a.cluster_id) as { id: string; tokens: string }[])
     .map((c) => ({ id: c.id, s: jaccard(toks, new Set<string>(JSON.parse(c.tokens))) }))
     .filter((c) => c.s >= 0.3)
     .sort((x, y) => y.s - x.s)

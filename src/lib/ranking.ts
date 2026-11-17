@@ -89,9 +89,9 @@ export function scoreCluster(input: RankInput, prefs: RankPrefs): ScoreBreakdown
   const coverage = Math.log2(1 + input.sourceCount) * 1.6;
   parts.push({ label: `Coverage (${input.sourceCount} source${input.sourceCount === 1 ? "" : "s"})`, value: coverage });
 
-  // Recency: half-life of 30 hours.
+  // Recency: worth up to 6, halving every 16 hours, so breaking stories surface fast.
   const ageH = Math.max(0, (prefs.now - input.lastUpdated) / 3_600_000);
-  const recency = 3 * Math.pow(0.5, ageH / 30);
+  const recency = 6 * Math.pow(0.5, ageH / 16);
   parts.push({ label: "Recency", value: recency });
 
   // Source priority (user-set per feed, default 1).

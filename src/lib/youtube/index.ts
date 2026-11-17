@@ -239,7 +239,7 @@ export async function missedAngles(db: DB, ytChannelId: string): Promise<{ id: s
     setActiveChannel(db, original);
   }
   const covered = (db.prepare(
-    `SELECT v.title FROM yt_comp_videos v JOIN yt_competitors c ON c.id = v.competitor_id WHERE c.yt_channel_id = ? AND v.published_at >= datetime('now', '-30 days')`,
+    `SELECT v.title FROM yt_comp_videos v JOIN yt_competitors c ON c.id = v.competitor_id WHERE c.yt_channel_id = ? AND v.published_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-30 days')`,
   ).all(ytChannelId) as { title: string }[]).map((r) => new Set(uniqueTokens(r.title)));
   return stories
     .filter((s) => !covered.some((t) => jaccard(t, new Set(uniqueTokens(s.headline))) >= 0.2))

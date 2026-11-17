@@ -5,6 +5,8 @@ import { useRef, useState } from "react";
 import { api } from "./api";
 import { Icon } from "./Icon";
 import { AiButton } from "./AiButton";
+import { ReadTimeBar } from "./ReadTime";
+import { FORMATS } from "@/lib/youtube/guide";
 import type { Production, ProductionDocs } from "@/lib/production-shared";
 import { BLEND, DIALS, type Dials, type Preset } from "@/lib/voice-shared";
 
@@ -159,6 +161,10 @@ export function ScriptWorkbench({ p, presets, voice, onProduction }: { p: Produc
           </div>
         )}
 
+        <div className="mt-2">
+          <ReadTimeBar script={docs.script ?? ""} contentType={p.contentType} formatLength={FORMATS.find((f) => f.id === docs.yt_format)?.length}
+            timing={docs.timing} onTiming={(j) => { setDocs({ ...docs, timing: j }); saveDoc({ timing: j }); }} />
+        </div>
         <textarea
           ref={ta}
           className="input mt-2 min-h-[420px] font-mono text-[13px] leading-relaxed"

@@ -47,7 +47,7 @@ export function listPosts(db: DB, opts: { platform?: string; days?: number; limi
   const where = ["(channel_id = ? OR channel_id IS NULL)"];
   const args: unknown[] = [opts.channelId ?? activeChannelId(db)];
   if (opts.platform) { where.push("platform = ?"); args.push(opts.platform); }
-  if (opts.days) { where.push("published_at >= datetime('now', ?)"); args.push(`-${opts.days} days`); }
+  if (opts.days) { where.push("published_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)"); args.push(`-${opts.days} days`); }
   return (db.prepare(`SELECT * FROM own_posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC LIMIT ?`).all(...args, opts.limit ?? 2000) as Row[]).map(map);
 }
 

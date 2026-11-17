@@ -77,7 +77,7 @@ export function translationJobs(db: DB): { kind: TKind; id: string; parts: strin
   // Bangla episode and news titles/summaries (short, many).
   for (const r of db.prepare(
     `SELECT a.id, a.title FROM articles a JOIN feeds f ON f.id = a.feed_id
-     WHERE COALESCE(a.published_at, a.fetched_at) >= datetime('now', '-7 days') AND (f.language = 'bn' OR a.language = 'bn')
+     WHERE COALESCE(a.published_at, a.fetched_at) >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-7 days') AND (f.language = 'bn' OR a.language = 'bn')
      ORDER BY COALESCE(a.published_at, a.fetched_at) DESC LIMIT 400`,
   ).all() as { id: string; title: string }[]) {
     if (isBangla(r.title)) add("article", r.id);
