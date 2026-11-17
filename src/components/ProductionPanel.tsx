@@ -4,11 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "./api";
 import { AiButton } from "./AiButton";
+import { ScriptWorkbench } from "./ScriptWorkbench";
 import { CONTENT_TYPES, DOC_KEYS, PLATFORMS, PROD_STAGES, progressOf, type Production, type ProductionDocs } from "@/lib/production-shared";
 
 const DOC_LABEL: Record<(typeof DOC_KEYS)[number], string> = { script: "Script", shots: "Shot list", thumbnail: "Thumbnail & titles", cutdowns: "Cut-downs", captions: "Captions" };
 const DOC_HINT: Record<(typeof DOC_KEYS)[number], string> = {
-  script: "What you say and what's on screen, line by line. Write your own or draft it in your voice from this project's research.",
+  script: "Write it step by step in your voice (set up in Voice Lab): real material, hooks, outline, draft — then select any passage to rewrite it.",
   shots: "Every shot in order, where the visual comes from, on-screen text and timing.",
   thumbnail: "Three thumbnail concepts and title options.",
   cutdowns: "Vertical clips to cut from the long piece, each with its own hook.",
@@ -17,13 +18,12 @@ const DOC_HINT: Record<(typeof DOC_KEYS)[number], string> = {
 const PLATFORM_LABEL: Record<string, string> = { youtube: "YouTube", instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok" };
 
 /** The content side of a project: type, stage, date, platforms, and the working documents. */
-export function ProductionPanel({ initial }: { initial: Production }) {
+export function ProductionPanel({ initial, presets = [] }: { initial: Production; presets?: string[] }) {
   const router = useRouter();
   const [p, setP] = useState(initial);
   const [tab, setTab] = useState<(typeof DOC_KEYS)[number]>("script");
   const [draft, setDraft] = useState<ProductionDocs>(initial.docs);
   const [saved, setSaved] = useState<string | null>(null);
-  const [direction, setDirection] = useState("");
 
   const save = async (patch: Record<string, unknown>) => {
     const r = await api<{ production: Production }>(`/api/projects/${p.projectId}/production`, "PATCH", patch);
@@ -96,23 +96,22 @@ export function ProductionPanel({ initial }: { initial: Production }) {
       </div>
       <div className="p-4">
         <p className="mb-2 text-[12.5px] text-muted">{DOC_HINT[tab]}</p>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {tab === "script" ? (
-            <>
-              <input className="input !w-full !py-1 text-[13px] sm:!w-80" value={direction} onChange={(e) => setDirection(e.target.value)} placeholder="Direction (optional): angle, tone, length…" />
-              <AiButton label={draft.script?.trim() ? "Rewrite script in my voice" : "Write script in my voice"} endpoint={`/api/projects/${p.projectId}/script`} payload={{ direction: direction || undefined, regenerate: !!draft.script?.trim() }} confirm="always" runningLabel="Writing the script…" onResult={onAi} />
-            </>
-          ) : (
-            <AiButton label="Make shot list, thumbnails, cut-downs & captions" endpoint={`/api/projects/${p.projectId}/package`} payload={{ regenerate: !!draft[tab]?.trim() }} confirm="always" runningLabel="Packaging…" onResult={onAi} />
-          )}
-        </div>
-        <textarea
-          className="input min-h-[320px] font-mono text-[13px] leading-relaxed"
-          value={draft[tab] ?? ""}
-          onChange={(e) => setDraft({ ...draft, [tab]: e.target.value })}
-          onBlur={() => (draft[tab] ?? "") !== (p.docs[tab] ?? "") && save({ docs: { [tab]: draft[tab] ?? "" } })}
-          placeholder={tab === "script" ? "Write here, or draft it from the research above…" : "Draft it from the script, or write your own…"}
-        />
+        {tab === "script" ? (
+          <ScriptWorkbench key={p.updatedAt.slice(0, 16)} p={p} presets={presets} onProduction={(prod) => { setP(prod); setDraft(prod.docs); router.refresh(); }} />
+        ) : (
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <AiButton label="Make shot list, thumbnails, cut-downs & captions" endpoint={`/api/projects/${p.projectId}/package`} payload={{ regenerate: !!draft[tab]?.trim() }} confirm="always" runningLabel="Packaging…" onResult={onAi} />
+            </div>
+            <textarea
+              className="input min-h-[320px] font-mono text-[13px] leading-relaxed"
+              value={draft[tab] ?? ""}
+              onChange={(e) => setDraft({ ...draft, [tab]: e.target.value })}
+              onBlur={() => (draft[tab] ?? "") !== (p.docs[tab] ?? "") && save({ docs: { [tab]: draft[tab] ?? "" } })}
+              placeholder="Draft it from the script, or write your own…"
+            />
+          </>
+        )}
       </div>
     </section>
   );

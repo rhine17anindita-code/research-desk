@@ -10,16 +10,26 @@ import { ChannelSwitcher } from "./ChannelSwitcher";
 import { onRecentChange, readRecent, type RecentItem } from "./recent";
 import { Icon } from "./Icon";
 
-const NAV = [
-  { href: "/studio", label: "Studio", icon: "bulb" },
-  { href: "/inbox", label: "My research", icon: "pin" },
-  { href: "/discover", label: "Discover", icon: "discover" },
-  { href: "/research", label: "Research", icon: "research" },
-  { href: "/calendar", label: "Calendar", icon: "calendar" },
-  { href: "/performance", label: "Performance", icon: "spark" },
-  { href: "/library", label: "Library", icon: "library" },
-  { href: "/search", label: "Search", icon: "search" },
-  { href: "/settings", label: "Settings", icon: "settings" },
+const NAV: { section: string; items: { href: string; label: string; icon: string }[] }[] = [
+  { section: "Today", items: [
+    { href: "/studio", label: "Studio", icon: "bulb" },
+    { href: "/discover", label: "Discover news", icon: "discover" },
+  ] },
+  { section: "Research", items: [
+    { href: "/inbox", label: "My research", icon: "pin" },
+    { href: "/research", label: "Projects", icon: "research" },
+    { href: "/library", label: "Library", icon: "library" },
+    { href: "/search", label: "Search", icon: "search" },
+  ] },
+  { section: "Make", items: [
+    { href: "/voice", label: "Voice Lab", icon: "edit" },
+    { href: "/calendar", label: "Calendar", icon: "calendar" },
+  ] },
+  { section: "Grow", items: [{ href: "/performance", label: "Performance", icon: "spark" }] },
+  { section: "Set up", items: [
+    { href: "/preferences", label: "Preferences", icon: "pin" },
+    { href: "/settings", label: "Settings", icon: "settings" },
+  ] },
 ];
 
 export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean; reason: string | null; model: string; spentToday: number; dailyLimit: number }; canSignOut?: boolean; channels: { list: { id: string; name: string; color: string }[]; active: string } }) {
@@ -72,18 +82,23 @@ export function Sidebar({ ai, canSignOut, channels }: { ai: { available: boolean
 
   const nav = (
     <nav className="flex flex-col gap-0.5">
-      {NAV.map((n) => (
-        <Link
-          key={n.href}
-          href={n.href}
-          onClick={() => setOpen(false)}
-          className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13.5px] transition-all ${
-            active(n.href) ? "bg-accent-soft font-semibold text-accent" : "text-ink-2 hover:translate-x-0.5 hover:bg-surface-2 hover:text-ink"
-          }`}
-        >
-          <Icon name={n.icon} size={17} className={active(n.href) ? "text-accent" : "text-muted group-hover:text-ink-2"} />
-          <span className="font-medium">{n.label}</span>
-        </Link>
+      {NAV.map((g) => (
+        <div key={g.section} className="mb-1.5">
+          <div className="px-2.5 pb-0.5 pt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">{g.section}</div>
+          {g.items.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              onClick={() => setOpen(false)}
+              className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13.5px] transition-all ${
+                active(n.href) ? "bg-accent-soft font-semibold text-accent" : "text-ink-2 hover:translate-x-0.5 hover:bg-surface-2 hover:text-ink"
+              }`}
+            >
+              <Icon name={n.icon} size={17} className={active(n.href) ? "text-accent" : "text-muted group-hover:text-ink-2"} />
+              <span className="font-medium">{n.label}</span>
+            </Link>
+          ))}
+        </div>
       ))}
     </nav>
   );

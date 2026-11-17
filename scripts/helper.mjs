@@ -24,7 +24,11 @@ const env = Object.fromEntries(
     .filter(Boolean)
     .map((m) => [m[1], m[2].trim()]),
 );
-const SITE = (process.env.HELPER_SITE || env.HELPER_SITE || "https://polite-midnightblue-newt-73.hostingersite.com").replace(/\/$/, "");
+// The live site, plus the copy running on this Mac when it's open.
+const SITES = (process.env.HELPER_SITE || env.HELPER_SITE || "https://polite-midnightblue-newt-73.hostingersite.com,http://127.0.0.1:3100")
+  .split(",").map((s) => s.trim().replace(/\/$/, "")).filter(Boolean);
+let SITE = SITES[0];
+const VENV = path.join(os.homedir(), ".research-desk-venv/bin");
 const SECRET = process.env.HELPER_SECRET || env.HELPER_SECRET || env.YOUTUBE_API_KEY;
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
@@ -67,10 +71,28 @@ async function transcript(videoId, preferLang) {
   return segments.length ? { status: "ok", language: pick.languageCode, kind: pick.kind === "asr" ? "asr" : "manual", segments } : { status: "none" };
 }
 
-async function run() {
-  if (!SECRET) return log("No YOUTUBE_API_KEY in .env.local — nothing to sign with.");
-  const { jobs } = await call("/api/helper/jobs");
-  if (!jobs.length) return log("No transcripts needed.");
+async function media(job) {
+  const vid = (job.url.match(/[?&]v=([\w-]{11})/) || job.url.match(/youtu\.be\/([\w-]{11})/) || job.url.match(/shorts\/([\w-]{11})/) || [])[1];
+  if (vid) {
+    const t = await transcript(vid, "en").catch(() => null);
+    if (t?.status === "ok") return t.segments.map((s) => s.text).join(" ");
+  }
+  if (!fs.existsSync(path.join(VENV, "yt-dlp"))) throw new Error("yt-dlp isn't installed on this Mac");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rd-media-"));
+  try {
+    execFileSync(path.join(VENV, "yt-dlp"), ["-q", "--no-warnings", "--no-playlist", "-f", "bestaudio/best", "--max-filesize", "300M", "-o", path.join(dir, "audio.%(ext)s"), job.url], { stdio: "ignore", timeout: 300000 });
+    const file = fs.readdirSync(dir).find((f) => f.startsWith("audio."));
+    if (!file) throw new Error("Couldn't download the video (it may be private or need a login)");
+    const out = execFileSync(path.join(VENV, "python"), ["-I", path.join(ROOT, "scripts/transcribe.py"), path.join(dir, file), "auto"], { timeout: 1800000, maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] });
+    const j = JSON.parse(out.toString());
+    return j.segments.map((s) => s.text).join(" ");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+async function runSite() {
+  const { jobs, media: mediaJobs = [] } = await call("/api/helper/jobs");
   let done = 0;
   for (const job of jobs) {
     try {
@@ -82,7 +104,30 @@ async function run() {
     }
     await new Promise((r) => setTimeout(r, 800)); // be gentle with YouTube
   }
-  log(`Sent ${done}/${jobs.length} transcripts to ${SITE}`);
+  let vids = 0;
+  for (const job of mediaJobs) {
+    try {
+      const text = await media(job);
+      await call("/api/helper/media", { method: "POST", body: JSON.stringify({ type: job.type, id: job.id, status: text ? "ok" : "failed", text, error: text ? undefined : "No speech found" }) });
+      vids++;
+    } catch (e) {
+      await call("/api/helper/media", { method: "POST", body: JSON.stringify({ type: job.type, id: job.id, status: "failed", error: String(e.message).slice(0, 200) }) }).catch(() => {});
+      log("video failed", job.url, e.message);
+    }
+  }
+  log(`${SITE}: ${done}/${jobs.length} transcripts, ${vids}/${mediaJobs.length} videos`);
+}
+
+async function run() {
+  if (!SECRET) return log("No YOUTUBE_API_KEY in .env.local — nothing to sign with.");
+  for (const site of SITES) {
+    SITE = site;
+    try {
+      await runSite();
+    } catch (e) {
+      if (!/fetch failed|ECONNREFUSED/.test(String(e.message) + String(e.cause?.code))) log(site, "error:", e.message);
+    }
+  }
 }
 
 function install() {
@@ -109,5 +154,38 @@ function install() {
   log(`Installed: runs every 10 minutes while you're logged in. Log: ${logFile}`);
 }
 
+async function pushLocal() {
+  // One-time move of your work from this Mac's database to the live site.
+  const { default: Database } = await import(path.join(ROOT, "node_modules/better-sqlite3/lib/index.js"));
+  const db = new Database(path.join(ROOT, "data/research-desk.db"), { readonly: true });
+  const all = (sql) => db.prepare(sql).all();
+  const projects = all("SELECT * FROM projects WHERE title NOT LIKE 'TEST%'");
+  const ids = projects.map((p) => p.id);
+  const items = ids.length ? all(`SELECT * FROM project_items WHERE project_id IN (${ids.map((i) => `'${i}'`).join(",")})`) : [];
+  const sourceIds = items.filter((i) => i.item_type === "source").map((i) => i.item_id);
+  const payload = {
+    ideas: all("SELECT * FROM ideas WHERE status IN ('saved','developing','made') OR origin = 'user'"),
+    inspirations: all("SELECT * FROM inspirations"),
+    voice_sources: all("SELECT * FROM voice_sources WHERE status = 'ready'"),
+    voice_profiles: all("SELECT * FROM voice_profiles"),
+    projects,
+    project_items: items,
+    sources: sourceIds.length ? all(`SELECT * FROM sources WHERE id IN (${sourceIds.map((i) => `'${i}'`).join(",")})`) : [],
+  };
+  SITE = SITES[0];
+  const r = await call("/api/helper/import", { method: "POST", body: JSON.stringify(payload) });
+  log("Moved to", SITE, JSON.stringify(r.counts));
+}
+
 if (process.argv.includes("--install")) install();
-else run().catch((e) => log("Helper error:", e.message));
+else if (process.argv.includes("--push-local")) pushLocal().catch((e) => log("Push failed:", e.message));
+else {
+  // One helper at a time (a long video can take a while to transcribe).
+  const lock = path.join(os.tmpdir(), "research-desk-helper.lock");
+  try {
+    const age = Date.now() - fs.statSync(lock).mtimeMs;
+    if (age < 45 * 60_000) process.exit(0);
+  } catch {}
+  fs.writeFileSync(lock, String(process.pid));
+  run().catch((e) => log("Helper error:", e.message)).finally(() => fs.rmSync(lock, { force: true }));
+}

@@ -12,6 +12,7 @@ import { listProductions } from "../production";
 import { truncate } from "../text";
 import { latestReport, listComments, listPosts, saveReport } from "./store";
 import { performance, performanceBrief } from "./patterns";
+import { prefsBlock } from "../prefs";
 
 /**
  * Two AI reads of the creator's own numbers:
@@ -125,6 +126,7 @@ export async function strategyReport(db: DB, opts: { estimateOnly?: boolean; dir
   const user = [
     personalContext(db),
     `TODAY (Bangladesh): ${today}`,
+    prefsBlock(db),
     ch.goodExamples.trim() ? `IDEAS THEY LOVE:\n${truncate(ch.goodExamples.trim(), 1200)}` : "",
     ch.badExamples.trim() ? `WHAT BORES THEM:\n${truncate(ch.badExamples.trim(), 800)}` : "",
     `THEIR NUMBERS:\n${performanceBrief(db, perf)}`,

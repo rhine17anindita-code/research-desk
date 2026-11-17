@@ -660,4 +660,78 @@ INSERT OR IGNORE INTO channel_talk_off (channel_id, feed_id)
   SELECT 'ch_culture', id FROM feeds WHERE category = 'talk' AND name NOT IN ('The Rest Is History', 'Lex Fridman', 'The Diary Of A CEO', 'Hasan Minhaj', 'Chris Williamson (Modern Wisdom)', 'BeerBiceps (The Ranveer Show)', 'DW Alap');
 `,
   },
+  {
+    id: 12,
+    name: "voice-lab",
+    sql: `
+-- Voice Lab: scripts and videos (yours and your inspirations) that teach the writer how to sound.
+CREATE TABLE voice_sources (
+  id TEXT PRIMARY KEY,
+  channel_id TEXT,
+  kind TEXT NOT NULL,                -- mine | inspiration
+  title TEXT NOT NULL,
+  url TEXT,
+  platform TEXT,                     -- youtube | instagram | tiktok | facebook | text
+  creator TEXT,
+  text TEXT,
+  status TEXT NOT NULL DEFAULT 'ready', -- ready | queued (waiting for the Mac helper) | failed
+  error TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_voice_sources_channel ON voice_sources(channel_id, kind);
+
+-- One voice per channel: the written guides (AI-drafted, yours to edit), dials, presets, banned phrases.
+CREATE TABLE voice_profiles (
+  channel_id TEXT PRIMARY KEY,
+  guide_mine TEXT NOT NULL DEFAULT '',
+  guide_inspiration TEXT NOT NULL DEFAULT '',
+  dials TEXT NOT NULL DEFAULT '{}',
+  presets TEXT NOT NULL DEFAULT '[]',
+  banned TEXT NOT NULL DEFAULT '',
+  analysed_at TEXT,
+  updated_at TEXT NOT NULL
+);
+
+-- What you changed in AI drafts: the writer learns from these.
+CREATE TABLE script_edits (
+  id TEXT PRIMARY KEY,
+  channel_id TEXT,
+  project_id TEXT,
+  before_text TEXT NOT NULL,
+  after_text TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX idx_script_edits_project ON script_edits(project_id);
+
+-- Social videos added to My research get transcribed by the Mac helper too.
+ALTER TABLE research_items ADD COLUMN media_status TEXT; -- queued | done | failed
+`,
+  },
+  {
+    id: 13,
+    name: "voice-samples-to-voice-lab",
+    sql: `
+-- Old "paste your scripts" text moves into Voice Lab as your own source.
+INSERT INTO voice_sources (id, channel_id, kind, title, platform, text, status, created_at, updated_at)
+  SELECT 'vs_' || id, id, 'mine', 'Scripts pasted in Settings', 'text', voice_samples, 'ready', datetime('now'), datetime('now')
+  FROM channels WHERE TRIM(COALESCE(voice_samples, '')) != '';
+`,
+  },
+  {
+    id: 14,
+    name: "story-notes",
+    sql: `
+-- Editor's note per story (short AI read, cheapest model): why it matters, content options, viewer questions.
+ALTER TABLE clusters ADD COLUMN note TEXT;
+`,
+  },
+  {
+    id: 15,
+    name: "channel-prefs",
+    sql: `
+-- Structured preferences per channel: topic and format mix, boldness, depth, question style, automatic notes.
+ALTER TABLE channels ADD COLUMN prefs TEXT NOT NULL DEFAULT '{}';
+`,
+  },
 ];

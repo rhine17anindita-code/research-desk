@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StoryLens } from "@/components/StoryLens";
+import { getNote, storyLens } from "@/lib/ideation/lens";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getDb } from "@/lib/db";
@@ -38,6 +40,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   const signals = detectSignals([story.headline, story.summary ?? "", ...articles.map((a) => `${a.title} ${a.summary ?? ""}`)].join(" "), prefs.signals.filter((s) => s.enabled));
   const labels = Object.fromEntries(prefs.signals.map((s) => [s.id, s.label]));
 
+  const lens = storyLens(db, story.id);
   return (
     <div className="px-4 py-5 sm:px-6 lg:px-8">
       <TrackVisit kind="story" title={story.headline} href={`/story/${story.id}`} />
@@ -59,6 +62,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             </div>
             <div className="mt-2"><StoryFeedback id={story.id} state={story.state} rating={story.rating} /></div>
           </div>
+
+          {lens && <StoryLens clusterId={story.id} lens={lens} note={getNote(db, story.id)} />}
 
           {story.summary && (
             <div>

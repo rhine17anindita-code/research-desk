@@ -99,6 +99,7 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
   let fileType: string | null = null;
   let publisher: string | null = null;
   let publishedAt: string | null = null;
+  let mediaQueued = false;
 
   if (!url && !text && !note && !input.file) throw new Error("Paste a link, some text, a note, or add a file");
 
@@ -146,6 +147,10 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
     if (!body || body.length < 400) {
       body = [meta.description, body].filter(Boolean).join("\n\n") || null;
       status = "thin";
+      if (["instagram", "tiktok"].includes(detectKind(url)) || /facebook\.com\/(reel|watch|share\/r|.*\/videos\/)|fb\.watch/.test(url)) {
+        mediaQueued = true;
+        error = "The video's words are on their way: your Mac helper transcribes it (within about 10 minutes while your Mac is on).";
+      }
       error ||= ["instagram", "tiktok", "x"].includes(detectKind(url))
         ? "Social posts can't be read automatically — paste the text or add a screenshot."
         : "Only part of the page could be read (paywall or blocked) — paste the text if you need all of it.";
@@ -174,6 +179,7 @@ export async function addResearch(db: DB, input: AddResearchInput): Promise<Rese
     id, activeChannelId(db), kind, url, truncate(title, 300), body, kind === "note" ? null : note, filePath, fileType, status, error, source.id,
     JSON.stringify(relatedStories(db, [title, note, body?.slice(0, 3000)].filter(Boolean).join(" "))), now, now,
   );
+  if (mediaQueued) db.prepare("UPDATE research_items SET media_status = 'queued' WHERE id = ?").run(id);
   return getResearch(db, id)!;
 }
 

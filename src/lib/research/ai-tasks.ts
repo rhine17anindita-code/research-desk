@@ -13,6 +13,7 @@ import { personalContext } from "../ideation/personal";
 import { relatedStories } from "../repo/stories";
 import { searchLocal, searchWikipedia } from "./retrieval";
 import { exploreSources, type ExploreResult } from "./retrieval";
+import { deepenSourceList } from "./deepen";
 import { QUESTION_DIMENSIONS, type Answer, type AnswerPoint, type ClaimKind, type DeepBrief, type Question, type Source } from "../types";
 
 /**
@@ -126,11 +127,53 @@ For each question give: a one-sentence rationale (why it matters for this story)
 
 ${UNTRUSTED_NOTE}`;
 
+const AUDIENCE_SYSTEM = `You think like the audience of a Bangladeshi English-language news creator: curious 18–30 year-olds scrolling past this story on their phone. Propose the questions THEY would actually have — the ones they'd type into Google or ask in the comments — not a researcher's.
+Good audience questions:
+- are plain-language and a bit human: "Wait, does this mean…", "Why is everyone angry about…", "What does this have to do with me / my family / my phone bill / my job?", "Who is this person and why do they matter?", "Is this true or propaganda?", "What happens next?";
+- include the confused and the sceptical reactions, and the "explain like I'm new to this" ones;
+- are still specific to THIS story's people, numbers and places;
+- use the REAL SIGNALS given (searches people make, comments, notes) where they fit.
+For each: dimension "meaning" is fine (it will be filed as an audience question); rationale = why a viewer would ask it; answerability honest; search_queries = what to look up to answer it.`;
+
+/** Real signals of what people wonder: Google's search suggestions (free), the creator's comments, the story note. */
+async function audienceSignals(db: DB, headline: string, entities: string[], clusterId: string): Promise<string> {
+  const out: string[] = [];
+  const terms = entities.filter((e) => e.length > 3).slice(0, 2);
+  const suggestions: string[] = [];
+  for (const t of terms) {
+    for (const pre of ["why", "what is", "is"]) {
+      try {
+        const r = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=${encodeURIComponent(`${pre} ${t}`)}`, { signal: AbortSignal.timeout(5000) });
+        const j = (await r.json()) as [string, string[]];
+        suggestions.push(...(j[1] ?? []).slice(0, 4));
+      } catch {
+        /* suggestions are a bonus */
+      }
+    }
+  }
+  if (suggestions.length) out.push(`WHAT PEOPLE SEARCH (Google suggestions):\n${[...new Set(suggestions)].slice(0, 16).map((s) => `- ${s}`).join("\n")}`);
+  const words = uniqueTokensOf(headline);
+  const comments = (db.prepare("SELECT text FROM own_comments ORDER BY likes DESC LIMIT 600").all() as { text: string }[])
+    .filter((c) => /\?/.test(c.text) && [...uniqueTokensOf(c.text)].some((w) => words.has(w)))
+    .slice(0, 8);
+  if (comments.length) out.push(`QUESTIONS IN THE CREATOR'S COMMENTS (related):\n${comments.map((c) => `- ${truncate(c.text.replace(/\s+/g, " "), 200)}`).join("\n")}`);
+  const note = (db.prepare("SELECT note FROM clusters WHERE id = ?").get(clusterId) as { note: string | null } | undefined)?.note;
+  if (note) {
+    try {
+      const n = JSON.parse(note) as { viewer_questions?: { question: string }[] };
+      if (n.viewer_questions?.length) out.push(`ALREADY NOTED VIEWER QUESTIONS (don't repeat; go further):\n${n.viewer_questions.map((q) => `- ${q.question}`).join("\n")}`);
+    } catch {}
+  }
+  return out.join("\n\n");
+}
+const uniqueTokensOf = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9\u0980-\u09ff]+/).filter((w) => w.length > 3));
+
 export async function generateQuestions(
   db: DB,
   clusterId: string,
-  opts: { regenerate?: boolean; guidance?: string; count?: number; estimateOnly?: boolean } = {},
+  opts: { regenerate?: boolean; guidance?: string; count?: number; estimateOnly?: boolean; track?: "researcher" | "audience" } = {},
 ): Promise<TaskOutcome<Question[]>> {
+  const audience = opts.track === "audience";
   const story = getStory(db, clusterId);
   if (!story) return { ok: false, reason: "provider_error", message: "Story not found" };
   const articles = getStoryArticles(db, clusterId);
@@ -152,18 +195,19 @@ export async function generateQuestions(
     existing.length ? `EXISTING QUESTIONS (do not repeat or rephrase):\n${existing.map((q) => `- ${q.text}`).join("\n")}` : "",
     `THE RESEARCHER ESPECIALLY VALUES: ${[...signalIds].join("; ")}.`,
     opts.guidance ? `RESEARCHER'S DIRECTION FOR THIS BATCH: ${opts.guidance}` : "",
+    audience ? await audienceSignals(db, story.headline, story.entities, clusterId) : "",
     `Propose ${count} questions.`,
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const task = {
-    task: "questions.generate",
-    system: QUESTIONS_SYSTEM,
+    task: audience ? "questions.audience" : "questions.generate",
+    system: audience ? AUDIENCE_SYSTEM : QUESTIONS_SYSTEM,
     user,
     schema: QuestionsSchema,
     maxTokens: 6000,
-    cacheParts: [clusterId, articles.map((a) => a.id), existing.map((q) => q.text), opts.guidance ?? "", count, personalContext(db)],
+    cacheParts: [clusterId, articles.map((a) => a.id), existing.map((q) => q.text), opts.guidance ?? "", count, personalContext(db), opts.track ?? "researcher"],
     bypassCache: !!opts.regenerate,
   };
   if (opts.estimateOnly) return { estimate: estimateTaskCost(db, task) };
@@ -182,7 +226,7 @@ export async function generateQuestions(
       createQuestion(db, {
         clusterId,
         text,
-        dimension: q.dimension,
+        dimension: audience ? "audience" : q.dimension,
         rationale: q.rationale,
         answerState: q.answerability,
         priority: prio[q.priority],
@@ -204,6 +248,7 @@ const AnswerSchema = z.object({
   points: z.array(z.object({ text: z.string(), kind: z.enum(["fact", "background", "interpretation", "allegation", "prediction", "hypothesis"]), sources: z.array(z.string()) })),
   caveats: z.array(z.string()),
   next_steps: z.array(z.string()),
+  plain: z.string().optional(),
 });
 
 const ANSWER_SYSTEM = `You answer research questions strictly from the numbered source excerpts provided. You are writing for a researcher deciding whether the question deserves deeper work, so be brief and exact.
@@ -214,6 +259,7 @@ Rules:
 - background: context from your own general knowledge that the excerpts do not contain (history, how an institution works, well-known prior events). Use it when it genuinely helps the researcher, keep it to well-established knowledge, give no source labels, and never invent precise figures, dates or quotes. It is shown to the researcher as unverified.
 - Base the state only on the excerpts: if they do not contain enough to answer, set state to "insufficient" even when background helps, and say what evidence would settle it and where to find it.
 - "contested" means credible sources in the excerpts disagree; say who says what.
+- plain: the answer as the creator would say it on camera to a curious 20-year-old — one or two plain sentences, no jargon, honest about what isn't known.
 - summary: 2–4 sentences that directly answer the question as far as the evidence allows; lead with the answer, not with caveats. points: at most 7. caveats: important qualifications. next_steps: concrete ways to verify or deepen (documents, datasets, people or institutions to consult, searches).
 
 ${UNTRUSTED_NOTE}`;
@@ -272,6 +318,8 @@ export async function answerQuestion(
   if (level === 1 && !opts.estimateOnly && questionSources(db, questionId, ["attached"]).length < 2) {
     await quickBackground(db, q);
   }
+  // Full article text instead of feed blurbs, for the story's main coverage (free).
+  if (!opts.estimateOnly && q.clusterId) await deepenSourceList(db, storySources(db, q.clusterId).slice(0, 6)).catch(() => {});
   const { story, attached, candidates } = questionContext(db, q);
   // Priority: sources the user attached, then the story's own coverage, then (level 2) candidates found by search.
   const pool: Source[] = [
@@ -301,7 +349,7 @@ export async function answerQuestion(
     user,
     schema: AnswerSchema,
     maxTokens: 5000,
-    cacheParts: [questionId, q.text, [...pack.refs.values()].map((s) => s.id), level, "v2"],
+    cacheParts: [questionId, q.text, [...pack.refs.values()].map((s) => s.id), level, "v3"],
     bypassCache: !!opts.regenerate,
   };
   if (opts.estimateOnly) return { estimate: estimateTaskCost(db, task) };
@@ -318,7 +366,7 @@ export async function answerQuestion(
     questionId,
     level,
     state: v.state,
-    summary: v.summary,
+    summary: res.data.plain?.trim() ? `${v.summary}\n\nSay it simply: ${res.data.plain.trim()}` : v.summary,
     points: v.points,
     caveats: v.droppedCitations ? [...v.caveats, `${v.droppedCitations} citation(s) referred to sources that were not supplied and were removed.`] : v.caveats,
     nextSteps: v.nextSteps,

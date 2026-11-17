@@ -8,7 +8,7 @@ import { Icon } from "./Icon";
 import { timeAgo } from "@/lib/format";
 import type { RankedCluster } from "@/lib/ranking";
 
-export function StoryCard({ story, signalLabels, rank }: { story: RankedCluster; signalLabels: Record<string, string>; rank?: number }) {
+export function StoryCard({ story, signalLabels, rank, why: whyLine }: { story: RankedCluster; signalLabels: Record<string, string>; rank?: number; why?: { text: string; tone: string; type: string } | null }) {
   const router = useRouter();
   const [state, setState] = useState(story.state);
   const [rating, setRating] = useState(story.rating);
@@ -87,6 +87,12 @@ export function StoryCard({ story, signalLabels, rank }: { story: RankedCluster;
             </h2>
           </Link>
           {story.summary && <p className="mt-1 line-clamp-2 text-[13.5px] leading-relaxed text-ink-2">{story.summary}</p>}
+          {whyLine && (
+            <p className="mt-1.5 line-clamp-3 rounded-lg bg-accent-soft/40 px-2.5 py-1.5 text-[12.5px] leading-snug text-ink-2">
+              <span className="mr-1 font-semibold text-accent">{whyLine.type} ·</span>
+              {whyLine.text}
+            </p>
+          )}
 
           {(signals.length > 0 || story.topQuestion) && (
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">

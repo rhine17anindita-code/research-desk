@@ -56,6 +56,7 @@ export const QUESTION_DIMENSIONS = [
   "missing-information",
   "relationships",
   "editorial-opportunity",
+  "audience",
 ] as const;
 export type QuestionDimension = (typeof QUESTION_DIMENSIONS)[number];
 
@@ -70,6 +71,7 @@ export const DIMENSION_LABELS: Record<string, string> = {
   "missing-information": "Missing information",
   relationships: "Relationships",
   "editorial-opportunity": "Editorial opportunity",
+  audience: "What viewers wonder",
 };
 
 /** What we currently know about whether the question can be answered. */

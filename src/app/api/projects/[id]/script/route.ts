@@ -6,5 +6,5 @@ export const maxDuration = 180;
 
 export const POST = route(async (req: Request, ctx: Ctx<{ id: string }>) => {
   const { id } = await ctx.params;
-  return writeScript(getDb(), id, await body<{ estimateOnly?: boolean; regenerate?: boolean; direction?: string }>(req));
+  return writeScript(getDb(), id, await body<{ estimateOnly?: boolean; regenerate?: boolean; direction?: string; preset?: string }>(req));
 });

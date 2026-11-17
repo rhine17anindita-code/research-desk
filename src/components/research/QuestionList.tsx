@@ -69,7 +69,16 @@ export function QuestionList({ questions, selectedId, onSelect, onChange, cluste
               Steer
             </button>
             <AiButton
-              label={questions.length ? "Generate more" : "Generate questions"}
+              label="What viewers wonder"
+              runningLabel="Thinking like your audience…"
+              endpoint={`/api/stories/${clusterId}/questions`}
+              payload={{ guidance: guidance || undefined, track: "audience", count: 6 }}
+              confirm="always"
+              variant="ghost"
+              onResult={() => onChange()}
+            />
+            <AiButton
+              label={questions.length ? "More research questions" : "Research questions"}
               runningLabel="Thinking about this story…"
               endpoint={`/api/stories/${clusterId}/questions`}
               payload={{ guidance: guidance || undefined }}

@@ -26,7 +26,11 @@ export type ProdStage = (typeof PROD_STAGES)[number]["id"];
 
 export const PLATFORMS = ["youtube", "instagram", "facebook", "tiktok"] as const;
 
-export interface ProductionDocs { script?: string; shots?: string; thumbnail?: string; cutdowns?: string; captions?: string }
+export interface ProductionDocs {
+  script?: string; shots?: string; thumbnail?: string; cutdowns?: string; captions?: string;
+  /** Script-writing steps: hook options, the chosen hook, the approved beat outline, and the last AI draft (to learn from your edits). */
+  hooks?: string; hook?: string; outline?: string; script_ai?: string;
+}
 export const DOC_KEYS = ["script", "shots", "thumbnail", "cutdowns", "captions"] as const;
 
 export interface Production {

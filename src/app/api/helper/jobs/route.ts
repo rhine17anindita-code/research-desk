@@ -29,5 +29,10 @@ export const GET = route((req: Request) => {
     articleId ? ((db.prepare("SELECT COALESCE(a.language, f.language, 'en') AS l FROM articles a LEFT JOIN feeds f ON f.id = a.feed_id WHERE a.id = ?").get(articleId) as { l: string } | undefined)?.l ?? "en") : "en";
   const seen = new Set<string>();
   const jobs = [...queued, ...ahead].filter((j) => (seen.has(j.videoId) ? false : (seen.add(j.videoId), true))).map((j) => ({ ...j, lang: lang(j.articleId).slice(0, 2) }));
-  return { ok: true, jobs };
+  // Videos to transcribe from their audio: Voice Lab sources and social links in My research.
+  const media = [
+    ...(db.prepare("SELECT id, url FROM voice_sources WHERE status = 'queued' AND url IS NOT NULL ORDER BY created_at LIMIT 15").all() as { id: string; url: string }[]).map((r) => ({ type: "voice", ...r })),
+    ...(db.prepare("SELECT id, url FROM research_items WHERE media_status = 'queued' AND url IS NOT NULL ORDER BY created_at LIMIT 10").all() as { id: string; url: string }[]).map((r) => ({ type: "research", ...r })),
+  ];
+  return { ok: true, jobs, media };
 });

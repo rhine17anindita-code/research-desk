@@ -13,8 +13,8 @@ export interface TaskGroup {
 
 export const TASK_GROUPS: TaskGroup[] = [
   { id: "ideas", label: "Content ideas", hint: "Idea batches and daily ideas", prefixes: ["ideas."], defaultModel: "claude-opus-5-5" },
-  { id: "writing", label: "Scripts, outlines, pitches & proposals", hint: "Expanding your ideas, angles, outlines, proposals", prefixes: ["creator.", "pitch.", "script."], defaultModel: "claude-opus-5-5" },
-  { id: "packaging", label: "Shot lists, thumbnails, cut-downs & captions", hint: "Packaging a finished script", prefixes: ["package."], defaultModel: "claude-sonnet-5-5" },
+  { id: "writing", label: "Scripts, outlines, pitches & proposals", hint: "Expanding your ideas, angles, outlines, proposals", prefixes: ["creator.", "pitch.", "script.", "voice."], defaultModel: "claude-opus-5-5" },
+  { id: "packaging", label: "Shot lists, thumbnails, cut-downs & captions", hint: "Packaging a finished script", prefixes: ["package.", "polish."], defaultModel: "claude-sonnet-5-5" },
   { id: "talk", label: "Reading talk shows & podcasts", hint: "Mining an episode's transcript for claims, quotes and ideas", prefixes: ["talk."], defaultModel: "claude-sonnet-5-5" },
   { id: "strategy", label: "Strategist reports", hint: "Weekly read of your numbers: what works, what to make next", prefixes: ["strategy."], defaultModel: "claude-opus-5-5" },
   { id: "audience", label: "Reading your comments", hint: "What your audience asks, requests and pushes back on", prefixes: ["audience."], defaultModel: "claude-sonnet-5-5" },

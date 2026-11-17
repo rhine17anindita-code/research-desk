@@ -10,6 +10,7 @@ import { DeleteProject, ProjectField, ProjectQuestions, ProjectSide, RemoveItem,
 import { NotesPanel } from "@/components/research/NotesPanel";
 import { CreatorPanel } from "@/components/CreatorPanel";
 import { ProductionPanel } from "@/components/ProductionPanel";
+import { getProfile } from "@/lib/voice";
 import { getProduction } from "@/lib/production";
 import { Icon } from "@/components/Icon";
 import { TrackVisit } from "@/components/CommandPalette";
@@ -54,7 +55,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <ProjectField id={id} field="thesis" value={project.thesis} label="Research question / thesis" placeholder="What are you trying to establish?" />
           </header>
 
-          <ProductionPanel initial={getProduction(db, id)!} />
+          <ProductionPanel initial={getProduction(db, id)!} presets={getProfile(db).presets.map((x) => x.name)} />
 
           <section>
             <div className="eyebrow mb-2">Stories</div>

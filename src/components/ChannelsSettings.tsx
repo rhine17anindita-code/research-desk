@@ -94,8 +94,8 @@ function ChannelCard({ ch, feeds, members, active, onlyOne }: { ch: Channel; fee
           <input className="input text-[12.5px]" value={f.referenceCreators} onChange={(e) => setF({ ...f, referenceCreators: e.target.value })} />
         </div>
         <div className="md:col-span-2">
-          <label className="label">Your voice — paste 2–3 of your old scripts</label>
-          <textarea className="input min-h-[110px] text-[12.5px]" value={f.voiceSamples} onChange={(e) => setF({ ...f, voiceSamples: e.target.value })} placeholder="Scripts are drafted to sound like these: your openings, rhythm, humour, the words you use." />
+          <label className="label">Your voice</label>
+          <p className="text-[12.5px] text-muted">Scripts, videos, inspirations, dials and banned phrases now live in <a href="/voice" className="text-accent underline">Voice Lab</a> (one per channel).</p>
         </div>
         <div className="md:col-span-2">
           <label className="label">Your accounts on this channel</label>

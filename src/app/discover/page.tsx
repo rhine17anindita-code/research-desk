@@ -2,6 +2,16 @@ import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { rankFeed, type FeedQuery } from "@/lib/ranking";
 import { StoryCard } from "@/components/StoryCard";
+import { getNote, storyLens } from "@/lib/ideation/lens";
+import type { DB } from "@/lib/db";
+
+/** One line on why a story could matter: the editor's note if there is one, else the free lens. */
+function whyLine(db: DB, id: string): { text: string; tone: string; type: string } | null {
+  const note = getNote(db, id);
+  const lens = storyLens(db, id);
+  if (!lens) return null;
+  return { text: note?.why_it_matters ?? `${lens.freshness.label}. ${lens.options[0] ? `Could be: ${lens.options[0].format.toLowerCase()} — ${lens.options[0].idea}` : ""}`, tone: lens.freshness.tone, type: lens.type };
+}
 import { AssessButton, RefreshButton, SampleButton } from "@/components/FeedActions";
 import { SectionRefresh } from "@/components/SectionRefresh";
 import { timeAgo } from "@/lib/format";
@@ -143,7 +153,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: SP 
           ) : (
             <div className="flex flex-col gap-2.5">
               {items.map((s, i) => (
-                <StoryCard key={s.id} story={s} signalLabels={signalLabels} rank={view === "ranked" ? i + 1 : undefined} />
+                <StoryCard key={s.id} story={s} signalLabels={signalLabels} rank={view === "ranked" ? i + 1 : undefined} why={whyLine(db, s.id)} />
               ))}
               {totalCandidates > items.length && <p className="py-3 text-center text-[12.5px] text-muted">Showing the top {items.length} of {totalCandidates}. Narrow with filters to see others.</p>}
             </div>

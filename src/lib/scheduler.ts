@@ -40,6 +40,10 @@ export function startScheduler() {
       await syncYoutubeIfStale(db, 6);
       const { syncMetaIfStale } = await import("./performance/meta");
       await syncMetaIfStale(db, 6);
+      // Editor's notes for the top new stories (cheapest model, capped at 8% of the monthly budget).
+      const { autoNotes } = await import("./ideation/lens");
+      const { getAiStatus } = await import("./ai/service");
+      if (getAiStatus(db).available) await autoNotes(db, 8).catch((e) => console.error("[notes]", (e as Error).message));
     } catch (err) {
       console.error("[scheduler] ingest failed", (err as Error).message);
     } finally {

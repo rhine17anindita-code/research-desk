@@ -48,7 +48,7 @@ function AnswerBody({ a, index, sources }: { a: DetailAnswer; index: Map<string,
         <span>{fmtDate(a.createdAt, true)}</span>
         {a.model && <span className="text-muted">· {a.model}</span>}
       </div>
-      <p className="text-[14.5px] leading-relaxed text-ink">{a.summary}</p>
+      <p className="whitespace-pre-line text-[14.5px] leading-relaxed text-ink">{a.summary}</p>
 
       {a.brief ? (
         <div className="mt-3 space-y-3">

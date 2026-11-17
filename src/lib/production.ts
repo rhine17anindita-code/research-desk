@@ -1,6 +1,7 @@
 import type { DB } from "./db";
 import { nowIso } from "./ids";
 import { activeChannelId } from "./channels";
+import { recordEdit } from "./voice";
 
 /**
  * Production layer on top of research projects: every project is also a content item
@@ -45,6 +46,10 @@ export function updateProduction(db: DB, projectId: string, patch: ProductionPat
   const cur = getProduction(db, projectId);
   if (!cur) return null;
   const n = { ...cur, ...patch, docs: { ...cur.docs, ...(patch.docs ?? {}) } };
+  // You edited an AI draft: remember the change so future drafts learn from it.
+  if (patch.docs?.script !== undefined && !("script_ai" in (patch.docs ?? {})) && cur.docs.script_ai && patch.docs.script !== cur.docs.script) {
+    recordEdit(db, projectId, cur.docs.script_ai, patch.docs.script);
+  }
   const date = n.publishDate && /^\d{4}-\d{2}-\d{2}$/.test(n.publishDate) ? n.publishDate : null;
   db.prepare(
     `UPDATE projects SET content_type = ?, production_stage = ?, publish_date = ?, platforms = ?, series_name = ?, guest = ?, sponsor = ?, published_url = ?, production = ?, updated_at = ? WHERE id = ?`,
