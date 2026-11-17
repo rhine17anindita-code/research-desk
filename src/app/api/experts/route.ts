@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import { body, route } from "@/lib/http";
-import { gather, getSolutionsBrief, keyTerms, lastRun, listExperts, saveExpert, type Scope } from "@/lib/experts";
+import { gather, getSolutionsBrief, glance, keyTerms, lastRun, listExperts, saveExpert, type Scope } from "@/lib/experts";
 
 export const maxDuration = 120;
 const scopeOk = (s: string): s is Scope => ["cluster", "project", "topic"].includes(s);
@@ -12,7 +12,7 @@ export const GET = route((req: Request) => {
   const ref = u.searchParams.get("ref") ?? "";
   if (!scopeOk(scope) || !ref) throw new Error("Which story, project or topic?");
   const db = getDb();
-  return { ok: true, items: listExperts(db, scope, ref), run: lastRun(db, scope, ref), brief: getSolutionsBrief(db, scope, ref), terms: keyTerms(db, scope, ref) };
+  return { ok: true, items: listExperts(db, scope, ref), run: lastRun(db, scope, ref), brief: getSolutionsBrief(db, scope, ref), terms: keyTerms(db, scope, ref), glance: glance(db, scope, ref) };
 });
 
 /** Gather (or refresh) the library from open sources — free. */

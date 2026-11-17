@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDb, MockProvider, useMock } from "./helpers";
 import { createProject } from "@/lib/repo/projects";
-import { classify, gather, getSolutionsBrief, keptExperts, lastRun, listExperts, recentLibraries, saveExpert, solutionsMaterial, writeSolutionsBrief } from "@/lib/experts";
+import { askExpert, classify, gather, glance, getSolutionsBrief, keptExperts, lastRun, listExperts, recentLibraries, saveExpert, solutionsMaterial, writeSolutionsBrief } from "@/lib/experts";
 import { getSources } from "@/lib/repo/sources";
 import { projectItemIds } from "@/lib/repo/projects";
 import { getProduction, updateProduction } from "@/lib/production";
@@ -50,6 +50,36 @@ describe("Solutions & expert views", () => {
     expect(recentLibraries(db)[0].href).toBe("/experts?q=garment%20worker%20safety");
     // Cached for a week: a second gather is a no-op.
     expect((await gather(db, "topic", "garment worker safety")).added).toBe(0);
+  }, 15000);
+
+  it("gives a free at-a-glance summary pulled from the sources", async () => {
+    stubNet();
+    const db = freshDb();
+    await gather(db, "topic", "garment worker safety");
+    const g = glance(db, "topic", "garment worker safety")!;
+    expect(g.total).toBeGreaterThan(1);
+    expect(g.kinds.length).toBeGreaterThan(1);
+    const sol = g.themes.find((t) => t.id === "solutions")!;
+    expect(sol.points.length).toBeGreaterThan(0);
+    // Word-for-word from a source, linked back to it, without the publisher tacked on.
+    for (const p of g.themes.flatMap((t) => t.points)) {
+      expect(p.url).toMatch(/^https?:/);
+      expect(p.text).not.toMatch(/\n|Brookings$/);
+    }
+    expect(g.readFirst.length).toBeGreaterThan(0);
+  }, 15000);
+
+  it("asks AI about one item on request and keeps the answer", async () => {
+    stubNet();
+    const db = freshDb();
+    await gather(db, "topic", "garment worker safety");
+    const it0 = listExperts(db, "topic", "garment worker safety")[0];
+    const mock = new MockProvider({ evidence: () => ({ answer: "A", key_points: ["k"], evidence: "case study", bangladesh: "Applies", caveats: ["abstract only"] }) });
+    useMock(mock);
+    expect(((await askExpert(db, it0.id, { estimateOnly: true })) as { estimate?: { model: string } }).estimate?.model).toMatch(/haiku/);
+    expect(await askExpert(db, it0.id, { question: "Is it convincing?" })).toMatchObject({ ok: true });
+    expect(mock.calls[0].user).toContain("QUESTION: Is it convincing?");
+    expect(listExperts(db, "topic", "garment worker safety").find((x) => x.id === it0.id)?.aiNote?.answer).toBe("A");
   }, 15000);
 
   it("keeping an item in a project makes it a source the script can cite", async () => {

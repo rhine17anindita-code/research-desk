@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { AiButton } from "../AiButton";
 import { Icon } from "../Icon";
-import type { ExpertItem, ExpertKind, Scope, SolutionsBrief } from "@/lib/experts";
+import type { ExpertItem, ExpertKind, ExpertNote, Glance, GlancePoint, Scope, SolutionsBrief } from "@/lib/experts";
 
 const KINDS: { id: ExpertKind; label: string; tone: string }[] = [
   { id: "research", label: "Research", tone: "bg-ai-soft text-ai" },
@@ -24,7 +24,7 @@ const TAGS = [
   { id: "Bangladesh", label: "Bangladesh" },
 ];
 
-interface Data { items: ExpertItem[]; run: { query: string; fetchedAt: string } | null; brief: SolutionsBrief | null; terms: string[] }
+interface Data { items: ExpertItem[]; run: { query: string; fetchedAt: string } | null; brief: SolutionsBrief | null; terms: string[]; glance: Glance | null }
 
 /**
  * Expert views: research papers, policy briefs, op-eds, official texts, expert videos and history —
@@ -40,7 +40,22 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
   const [q, setQ] = useState("");
   const [term, setTerm] = useState<{ q: string; t: { title: string; extract: string; url: string } | null; loading: boolean } | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [tab, setTab] = useState<"library" | "brief">("library");
+  const [tab, setTab] = useState<"glance" | "library" | "brief">("glance");
+  const [focus, setFocus] = useState<string | null>(null);
+  // Jump from the summary to an item (or a filtered view) in the library.
+  const showInLibrary = (o: { id?: string; kind?: ExpertKind; tag?: string; q?: string }) => {
+    setKind(o.kind ?? "all");
+    setTags(o.tag ? [o.tag] : []);
+    setQ(o.q ?? "");
+    setSavedOnly(false);
+    setShowAll(!!o.id);
+    setFocus(o.id ?? null);
+    setTab("library");
+  };
+  useEffect(() => {
+    if (tab === "library" && focus) setTimeout(() => document.getElementById(`ex-${focus}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+  }, [tab, focus]);
+  const setNote = (id: string, note: ExpertNote) => setData((d) => d && { ...d, items: d.items.map((x) => (x.id === id ? { ...x, aiNote: note } : x)) });
 
   const load = () => api<Data>(`/api/experts?scope=${scope}&ref=${encodeURIComponent(refId)}`).then(setData).catch((e) => setErr((e as Error).message));
   useEffect(() => {
@@ -122,11 +137,14 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
       {data?.run && (
         <>
           <div className="mt-2 flex gap-1 border-b border-line text-[12.5px]">
+            <button className={`-mb-px border-b-2 px-2 py-1 ${tab === "glance" ? "border-accent font-semibold text-ink" : "border-transparent text-muted"}`} onClick={() => setTab("glance")}>At a glance</button>
             <button className={`-mb-px border-b-2 px-2 py-1 ${tab === "library" ? "border-accent font-semibold text-ink" : "border-transparent text-muted"}`} onClick={() => setTab("library")}>Library ({items.length})</button>
             <button className={`-mb-px border-b-2 px-2 py-1 ${tab === "brief" ? "border-accent font-semibold text-ink" : "border-transparent text-muted"}`} onClick={() => setTab("brief")}>Solutions brief {data.brief ? "✓" : "(AI)"}</button>
           </div>
 
-          {data.terms.length > 0 && (
+          {tab === "glance" && data.glance && <GlanceView g={data.glance} items={items} onShow={showInLibrary} onNote={setNote} compact={compact} />}
+
+          {data.terms.length > 0 && tab !== "glance" && (
             <div className="mt-2">
               <div className="flex flex-wrap items-center gap-1 text-[12px]">
                 <span className="text-muted">Key terms:</span>
@@ -162,7 +180,7 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
               </div>
               <ul className="mt-2 divide-y divide-line">
                 {shown.map((i) => (
-                  <li key={i.id} className="flex gap-2 py-2">
+                  <li key={i.id} id={`ex-${i.id}`} className={`flex gap-2 py-2 ${focus === i.id ? "-mx-2 rounded-lg bg-accent-soft/40 px-2" : ""}`}>
                     <button title={scope === "project" ? "Keep — the script can cite it" : "Keep"} className={`mt-0.5 shrink-0 text-[15px] leading-none ${i.saved ? "text-accent" : "text-muted hover:text-ink"}`} onClick={() => toggleSave(i)}>{i.saved ? "★" : "☆"}</button>
                     <div className="min-w-0 flex-1">
                       <a href={i.url} target="_blank" rel="noreferrer" className="text-[13px] font-medium leading-snug text-ink hover:underline">{i.title} <Icon name="external" size={11} className="inline text-muted" /></a>
@@ -171,7 +189,8 @@ export function ExpertPanel({ scope, refId, title = "Solutions & expert views", 
                         {[i.publisher, i.year, i.authors && i.authors.split(",").slice(0, 2).join(",")].filter(Boolean).join(" · ")}
                         {i.tags.filter((t) => t !== "Bangladesh").map((t) => <span key={t} className="rounded-full border border-ok/30 px-1.5 text-ok">{t}</span>)}
                       </div>
-                      {i.snippet && <p className={`mt-0.5 text-[12.5px] leading-relaxed text-ink-2 ${compact ? "line-clamp-2" : "line-clamp-3"}`}>{i.snippet}</p>}
+                      {i.snippet && <p className={`mt-0.5 text-[12.5px] leading-relaxed text-ink-2 ${focus === i.id ? "" : compact ? "line-clamp-2" : "line-clamp-3"}`}>{i.snippet}</p>}
+                      <AskAi item={i} onNote={setNote} />
                     </div>
                   </li>
                 ))}
@@ -241,5 +260,125 @@ function BriefView({ b }: { b: SolutionsBrief }) {
       {b.what_to_watch.length > 0 && <div><div className="eyebrow mb-0.5">What to watch</div><ul className="list-disc pl-4">{b.what_to_watch.map((w, i) => <li key={i}>{w}</li>)}</ul></div>}
       <p className="text-[11px] text-muted">AI organisation of the library · {new Date(b.at).toLocaleDateString()} · check each claim against its source before saying it on camera.</p>
     </div>
+  );
+}
+
+const QUICK_ASKS = [
+  ["Quick summary", "Summarise this in plain words: what does it argue or find?"],
+  ["The evidence", "What evidence does this rest on, and how strong is it?"],
+  ["For Bangladesh", "How does this apply to Bangladesh specifically?"],
+  ["Counter-arguments", "What would critics say against this, and what are its weak spots?"],
+] as const;
+
+/** Optional, per item: the AI reads the page (or abstract) and answers. The answer is kept, so it's paid once. */
+function AskAi({ item, onNote }: { item: ExpertItem; onNote: (id: string, n: ExpertNote) => void }) {
+  const [open, setOpen] = useState(false);
+  const n = item.aiNote;
+  return (
+    <div className="mt-1">
+      <div className="flex flex-wrap items-center gap-3 text-[11.5px]">
+        <a href={item.url} target="_blank" rel="noreferrer" className="text-ink-2 hover:text-accent">Read it myself ↗</a>
+        <button className="font-medium text-ai hover:underline" onClick={() => setOpen((o) => !o)}>{n ? (open ? "Hide AI notes" : "AI notes ✓") : open ? "Close" : "Ask AI to look into it"}</button>
+      </div>
+      {open && <AskAiBox item={item} onNote={onNote} />}
+    </div>
+  );
+}
+
+function AskAiBox({ item, onNote }: { item: ExpertItem; onNote: (id: string, n: ExpertNote) => void }) {
+  const [question, setQuestion] = useState("");
+  const n = item.aiNote;
+  return (
+    <div>
+      {(
+        <div className="mt-1.5 rounded-lg border border-ai/20 bg-ai-soft/30 px-3 py-2 text-[12.5px]">
+          {n && (
+            <div className="mb-2 space-y-1 text-ink-2">
+              <div className="text-[11px] text-muted">Q: {n.question} · read {n.read === "full" ? "the full page" : "the abstract only"}</div>
+              <p>{n.answer}</p>
+              {n.key_points.length > 0 && <ul className="list-disc pl-4">{n.key_points.map((k, j) => <li key={j}>{k}</li>)}</ul>}
+              <p><span className="font-medium text-ink">Evidence: </span>{n.evidence}</p>
+              <p><span className="font-medium text-ink">Bangladesh: </span>{n.bangladesh}</p>
+              {n.caveats.length > 0 && <p className="text-[12px] text-muted">Careful: {n.caveats.join(" · ")}</p>}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1">
+            {QUICK_ASKS.map(([label, q]) => <button key={label} className={question === q ? "chip-accent" : "chip"} onClick={() => setQuestion(q)}>{label}</button>)}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <input className="input flex-1 !py-1 text-[12.5px]" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Or ask your own question about it… (default: what it says, the evidence, and Bangladesh)" />
+            <AiButton label={n ? "Ask again" : "Ask AI"} endpoint="/api/experts/ask" payload={{ id: item.id, question: question || undefined }} size="sm" runningLabel="Reading…" onResult={(r) => onNote(item.id, r.data as ExpertNote)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The whole library at a glance — pulled straight from the sources, no AI. */
+function GlanceView({ g, items, onShow, onNote, compact }: { g: Glance; items: ExpertItem[]; onShow: (o: { id?: string; kind?: ExpertKind; tag?: string; q?: string }) => void; onNote: (id: string, n: ExpertNote) => void; compact: boolean }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const byId = new Map(items.map((i) => [i.id, i]));
+  return (
+    <div className="mt-3 space-y-3">
+      <div className="rounded-lg bg-surface-2/70 px-3 py-2 text-[12.5px] text-ink-2">
+        <span className="font-semibold text-ink">{g.total} sources</span>
+        {g.years && <span> spanning {g.years.min === g.years.max ? g.years.min : `${g.years.min}–${g.years.max}`}</span>}:{" "}
+        {g.kinds.map((k, j) => (
+          <span key={k.kind}>{j > 0 && " · "}<button className="hover:text-accent hover:underline" onClick={() => onShow({ kind: k.kind })}>{k.count} {KIND_OF[k.kind].label.toLowerCase()}</button></span>
+        ))}
+        {g.voices.length > 0 && (
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <span className="text-muted">Who&apos;s weighing in:</span>
+            {g.voices.slice(0, compact ? 5 : 10).map((v) => <button key={v.name} className="chip !text-[11.5px]" onClick={() => onShow({ q: v.name })}>{v.name}{v.count > 1 ? ` ${v.count}` : ""}</button>)}
+          </div>
+        )}
+      </div>
+
+      <div className={`grid gap-3 ${compact ? "" : "md:grid-cols-2"}`}>
+        {g.themes.map((t) => (
+          <div key={t.id} className="rounded-xl border border-line px-3 py-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="text-[13.5px] font-semibold text-ink">{t.label}</h3>
+              <button className="shrink-0 text-[11.5px] text-accent hover:underline" onClick={() => onShow({ tag: t.id })}>All {t.count} →</button>
+            </div>
+            <div className="text-[11px] text-muted">{t.hint}</div>
+            <ul className="divide-y divide-line">{t.points.slice(0, compact ? 2 : 4).map((p) => <GlancePointRow key={p.itemId} p={p} item={byId.get(p.itemId)} open={open === p.itemId} onToggle={() => setOpen(open === p.itemId ? null : p.itemId)} onShow={onShow} onNote={onNote} />)}</ul>
+          </div>
+        ))}
+      </div>
+
+      {g.readFirst.length > 0 && (
+        <div>
+          <div className="eyebrow mb-1">If you only read a few — the strongest of each kind</div>
+          <ul className="space-y-1 text-[12.5px]">
+            {g.readFirst.map((p) => (
+              <li key={p.itemId} className="flex flex-wrap items-baseline gap-x-2">
+                <span className={`rounded-full px-1.5 py-px text-[10.5px] font-medium ${KIND_OF[p.kind].tone}`}>{KIND_OF[p.kind].label}</span>
+                <a href={p.url} target="_blank" rel="noreferrer" className="font-medium text-ink hover:underline">{p.title}</a>
+                <button className="text-[11.5px] text-accent hover:underline" onClick={() => onShow({ id: p.itemId })}>In library</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="text-[11px] text-muted">Pulled word-for-word from the sources themselves — no AI, free. Want more? “Ask AI” on any point reads that source for you, or the Solutions brief tab organises everything into options with pros and cons.</p>
+    </div>
+  );
+}
+
+
+function GlancePointRow({ p, item, open, onToggle, onShow, onNote }: { p: GlancePoint; item?: ExpertItem; open: boolean; onToggle: () => void; onShow: (o: { id?: string }) => void; onNote: (id: string, n: ExpertNote) => void }) {
+  return (
+    <li className="py-1.5">
+      {p.text && <p className="text-[12.5px] leading-relaxed text-ink-2">{p.text}</p>}
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px]">
+        <span className="text-muted">— {[p.publisher, p.year].filter(Boolean).join(", ") || KIND_OF[p.kind].label}</span>
+        <a href={p.url} target="_blank" rel="noreferrer" className="text-ink-2 hover:text-accent">Read ↗</a>
+        <button className="text-accent hover:underline" onClick={() => onShow({ id: p.itemId })}>In library</button>
+        {item && <button className="font-medium text-ai hover:underline" onClick={onToggle}>{item.aiNote ? "AI notes ✓" : "Ask AI"}</button>}
+      </div>
+      {item && open && <AskAiBox item={item} onNote={onNote} />}
+    </li>
   );
 }

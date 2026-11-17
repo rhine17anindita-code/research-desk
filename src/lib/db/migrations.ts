@@ -827,4 +827,12 @@ CREATE TABLE expert_runs (scope TEXT NOT NULL, ref_id TEXT NOT NULL, query TEXT 
 CREATE TABLE expert_briefs (scope TEXT NOT NULL, ref_id TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (scope, ref_id));
 `,
   },
+  {
+    id: 21,
+    name: "expert-ai-notes",
+    sql: `
+-- "Ask AI about this": the answer for one expert item, kept so it's never paid for twice.
+ALTER TABLE expert_items ADD COLUMN ai_note TEXT;
+`,
+  },
 ];
