@@ -25,7 +25,7 @@ const env = Object.fromEntries(
     .map((m) => [m[1], m[2].trim()]),
 );
 // The live site, plus the copy running on this Mac when it's open.
-const SITES = (process.env.HELPER_SITE || env.HELPER_SITE || "https://polite-midnightblue-newt-73.hostingersite.com,http://127.0.0.1:3100")
+const SITES = (process.env.HELPER_SITE || env.HELPER_SITE || "https://kndl.newthingmedia.org,http://127.0.0.1:3100")
   .split(",").map((s) => s.trim().replace(/\/$/, "")).filter(Boolean);
 let SITE = SITES[0];
 const VENV = path.join(os.homedir(), ".research-desk-venv/bin");
